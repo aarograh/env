@@ -1,0 +1,13 @@
+Input Stuff:
+
+for edits, "far=yes" in read parameter block
+for restart, "res=500" writes a restart file every 500 generations
+also have "wrs=94" for restart file number
+"uum=no" reduces memory.  New feature.
+
+Output Stuff:
+
+Get a big table from "far" card.
+Each unit has fission density and standard deviation
+fuelunits file is used to read and normalize fission density table
+columns in Fuelunits file: unitno pinvol pinfactor iasyx iasyy ipinx ipiny ipinz

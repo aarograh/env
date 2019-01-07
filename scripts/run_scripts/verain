@@ -1,0 +1,36 @@
+#!/bin/bash
+infile=$1
+if [ $# -eq 2 ]
+then
+   mpact=$2
+else
+   mpact=${MPACT_PATH:-"./MPACT.exe"}
+fi
+
+filename=$(basename "$1")
+filename="${filename%.*}"
+mpact_path=`dirname $mpact`
+ctf_preproc=${mpact_path}/../../COBRA-TF/cobra_tf/xml2ctf/xml2ctf
+
+# Convert verain to xml
+xmlfile=${filename}.xml
+command="react2xml.pl $infile ${xmlfile}"
+echo $command
+$command
+status=$?
+if [ $status -ne 0 ]; then
+   echo "Conversion from verain to xml failed."
+   exit $status
+fi
+
+# Convert xml to ctf input deck
+if [ `grep -c "coupling_method.*ctf" $xmlfile` -gt 0 ] && [ `grep -c "feedback.*on" $xmlfile` -gt 0 ]; then
+   command="$ctf_preproc --xmlfile=${filename}.xml"
+   echo $command
+#   $command
+   status=$?
+   if [ $status -ne 0 ]; then
+      echo "Conversion from xml to CTF input failed."
+      exit $status
+   fi
+fi

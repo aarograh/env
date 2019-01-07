@@ -1,0 +1,203 @@
+ ==============================================
+   KENOPOW - Pin Powers from KENO-VI output
+
+     Version 1.5 - 8/24/2013
+ ==============================================
+ keno output: _tot00000000.czp
+  fuel units: fuelunits
+ working dir: /home/aarograh/scripts/kenopow
+  octant sym:  T
+
+ problem dimensions:
+  number of assemblies = 1
+  number of assemblies across = 1
+  number of pins across = 4
+  number of axial levels = 16
+
+  KENO-VI RESULTS
+ =================
+
+   k-effective =  0.999658 +/-  0.000006
+
+ Average power =      NaN +/-   NaN%
+ Maximum power =  0.00000 +/- 0.000%
+ Minimum power =  0.00000 +/- 0.468%
+ Maximum sigma =  0.00000 +/- 0.531%
+ Minimum sigma =      NaN +/- 0.037%
+  Axial Offset =     NaN%
+
+  Power dependent maximum sigmas
+ ---------------------------------
+      < 0.5 =  0.531%
+  0.5 - 1.0 =  0.000%
+      > 1.0 =  0.000%
+
+  Octant symmetry statistics
+ ---------------------------------
+  Average Difference =      NaN
+  Std Dev Difference =      NaN
+  Maximum Difference =      NaN
+      Max Diff Pow 1 =      NaN
+      Max Diff Pow 2 =      NaN
+      Max Diff Unc 1 =      NaN
+      Max Diff Unc 2 =      NaN
+    Number of Sigmas =   NaN
+
+  Axial Powers
+
+  Level   Height        Axial Power     Avg Pin Unc
+ ----------------------------------------------------
+    16     0.0000       NaN +/-   NaN%     NaN%
+    15     0.0000       NaN +/-   NaN%     NaN%
+    14     0.0000       NaN +/-   NaN%     NaN%
+    13     0.0000       NaN +/-   NaN%     NaN%
+    12     0.0000       NaN +/-   NaN%     NaN%
+    11     0.0000       NaN +/-   NaN%     NaN%
+    10     0.0000       NaN +/-   NaN%     NaN%
+     9     0.0000       NaN +/-   NaN%     NaN%
+     8     0.0000       NaN +/-   NaN%     NaN%
+     7     0.0000       NaN +/-   NaN%     NaN%
+     6     0.0000       NaN +/-   NaN%     NaN%
+     5     0.0000       NaN +/-   NaN%     NaN%
+     4     0.0000       NaN +/-   NaN%     NaN%
+     3     0.0000       NaN +/-   NaN%     NaN%
+     2     0.0000       NaN +/-   NaN%     NaN%
+     1     0.0000       NaN +/-   NaN%     NaN%
+
+  Assembly Radial Powers
+ -----------------------------
+
+
+  Assembly Radial Uncertainty
+ -----------------------------
+
+
+  Assembly Radial Avg Pin Uncertainty
+ -------------------------------------
+
+
+  Assembly Axial Powers
+
+  Level   Height       Axial Powers
+ --------------------------------------
+                           [1,1]
+    16     0.0000       NaN +/-   NaN%
+    15     0.0000       NaN +/-   NaN%
+    14     0.0000       NaN +/-   NaN%
+    13     0.0000       NaN +/-   NaN%
+    12     0.0000       NaN +/-   NaN%
+    11     0.0000       NaN +/-   NaN%
+    10     0.0000       NaN +/-   NaN%
+     9     0.0000       NaN +/-   NaN%
+     8     0.0000       NaN +/-   NaN%
+     7     0.0000       NaN +/-   NaN%
+     6     0.0000       NaN +/-   NaN%
+     5     0.0000       NaN +/-   NaN%
+     4     0.0000       NaN +/-   NaN%
+     3     0.0000       NaN +/-   NaN%
+     2     0.0000       NaN +/-   NaN%
+     1     0.0000       NaN +/-   NaN%
+
+  Radial Pin Powers
+ -----------------------------------
+   Assembly:[1]
+       NaN
+       NaN      NaN
+       NaN      NaN      NaN
+       NaN      NaN      NaN      NaN
+
+
+  Radial Pin Power Uncertainties
+ -----------------------------------
+   Assembly:[1]
+     NaN%
+     NaN%    NaN%
+     NaN%    NaN%    NaN%
+     NaN%    NaN%    NaN%    NaN%
+
+
+  Radial Average Pin Uncertainties
+ -----------------------------------
+   Assembly:[1]
+     NaN%
+     NaN%    NaN%
+     NaN%    NaN%    NaN%
+     NaN%    NaN%    NaN%    NaN%
+
+created file: kenopow.h5
+ writing dataspace name: version
+   creating dataspace with rank            0
+   created dataspace id            67108866
+ writing dataspace name: core_map
+   creating dataspace with rank            2
+   creating dataspace with dims                     1                    1
+   created dataspace id            67108866
+ writing dataspace name: keff
+   creating dataspace with rank            0
+   created dataspace id            67108866
+ writing dataspace name: keff_sigma
+   creating dataspace with rank            0
+   created dataspace id            67108866
+ writing dataspace name: core_sym
+   creating dataspace with rank            0
+   created dataspace id            67108866
+ writing dataspace name: pin_powers
+   creating dataspace with rank            4
+   creating dataspace with dims                     1                   16                    4                    4
+   created dataspace id            67108866
+ writing dataspace name: pin_powers_sigma
+   creating dataspace with rank            4
+   creating dataspace with dims                     1                   16                    4                    4
+   created dataspace id            67108866
+ writing dataspace name: pin_volumes
+   creating dataspace with rank            4
+   creating dataspace with dims                     1                   16                    4                    4
+   created dataspace id            67108866
+ writing dataspace name: pin_factors
+   creating dataspace with rank            4
+   creating dataspace with dims                     1                   16                    4                    4
+   created dataspace id            67108866
+ writing dataspace name: axial_mesh
+   creating dataspace with rank            1
+   creating dataspace with dims                    17
+   created dataspace id            67108866
+ writing dataspace name: axial_powers
+   creating dataspace with rank            1
+   creating dataspace with dims                    16
+   created dataspace id            67108866
+ writing dataspace name: axial_powers_sigma
+   creating dataspace with rank            1
+   creating dataspace with dims                    16
+   created dataspace id            67108866
+ writing dataspace name: radial_powers
+   creating dataspace with rank            3
+   creating dataspace with dims                     1                    4                    4
+   created dataspace id            67108866
+ writing dataspace name: radial_powers_sigma
+   creating dataspace with rank            3
+   creating dataspace with dims                     1                    4                    4
+   created dataspace id            67108866
+ writing dataspace name: assembly_powers
+   creating dataspace with rank            2
+   creating dataspace with dims                     1                   16
+   created dataspace id            67108866
+ writing dataspace name: assembly_powers_sigma
+   creating dataspace with rank            2
+   creating dataspace with dims                     1                   16
+   created dataspace id            67108866
+ writing dataspace name: assembly_radial_powers
+   creating dataspace with rank            1
+   creating dataspace with dims                     1
+   created dataspace id            67108866
+ writing dataspace name: assembly_radial_powers_sigma
+   creating dataspace with rank            1
+   creating dataspace with dims                     1
+   created dataspace id            67108866
+ writing dataspace name: nodal_powers
+   creating dataspace with rank            3
+   creating dataspace with dims                     1                   16                    4
+   created dataspace id            67108866
+ writing dataspace name: nodal_powers_sigma
+   creating dataspace with rank            3
+   creating dataspace with dims                     1                   16                    4
+   created dataspace id            67108866

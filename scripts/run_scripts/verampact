@@ -1,0 +1,97 @@
+#!/bin/bash
+if [ $1 == "-h" ]
+then
+   echo "Usage:"
+   echo "verampact [vera input file] [MPACT path]"
+   exit 0
+fi
+
+#Read input
+infile=$1
+if [ $# -eq 1 ]
+then
+   nproc=-1
+   mpact=${MPACT_PATH:-"./MPACT.exe"}
+elif [ $# -eq 2 ]
+then
+   arg1=$2
+   if [ -z "${arg1##[0-9]*}" ]
+   then
+      nproc=$arg1
+      mpact=${MPACT_PATH:-"./MPACT.exe"}
+   else
+      mpact=$arg1
+      nproc=-1
+   fi
+elif [ $# -eq 3 ]
+then
+   arg1=$2
+   arg2=$3
+   if [ -z "${arg1##[0-9]*}" ]
+   then
+      nproc=$arg1
+      mpact=$arg2
+   else
+      mpact=$arg1
+      nproc=$arg2
+   fi
+fi
+
+# Call verain to perform conversion
+verain $infile $mpact
+status=$?
+
+if [ $status -ne 0 ]
+then
+   exit $status
+fi
+
+#Get paths
+filename=$(basename "$1")
+filename="${filename%.*}"
+mpact_path=`dirname $mpact`
+
+# If all went well, run the case
+if [ $nproc -eq -1 ]
+then
+   temp=`grep -n -e 'parallel_env' "${filename}.xml"`
+   #No parallel_env card, so just run in serial as default
+   if [ -z "$temp" ]
+   then
+     nproc=0
+   #Found the parallel_env card!  Now, grep the number of procs for each partition
+   #compute and set $nodes
+   else
+     temp=`grep -n -e 'num_space' "${filename}.xml"`
+     nproc=`echo "$temp" | cut -d'"' -f 6`
+     temp=`grep -n -e 'num_angle' "${filename}.xml"`
+     tmpnodes=`echo "$temp" | cut -d'"' -f 6`
+     nproc=$(( $nproc * $tmpnodes ))
+     temp=`grep -n -e 'num_energy' "${filename}.xml"`
+     tmpnodes=`echo "$temp" | cut -d'"' -f 6`
+     nproc=$(( $nproc * $tmpnodes ))
+     if [ $nproc -lt 0 ]
+     then
+       nproc="$(($nproc * -1))"
+     fi
+     nthreads=`grep -n -e 'num_threads' ${filename}.xml `
+     nthreads=`echo "$nthreads" | cut -d'"' -f 6`
+     command="export OMP_NUM_THREADS=$nthreads"
+     echo $command
+     $command
+   fi
+fi
+
+echo "Executable path: " $mpact
+echo "Number of processors: " $nproc
+
+
+if [ $nproc -eq 0 ]
+then
+   command="${mpact} ${filename}.xml"
+else
+   command="mpirun -np ${nproc} ${mpact} ${filename}.xml"
+fi
+
+echo $command
+$command
