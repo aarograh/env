@@ -13,6 +13,7 @@ module purge
 module load casl_tools/gcc-5.4.0
 
 # Modify paths
+export THERMOCHIMICA_ROOT=/projects/thermochimica
 export DATA=~/master/SCALE_test_data
 export MPACT_ADD_REPO_CLASS=Continuous
 export PATH=/opt/bin:$PATH

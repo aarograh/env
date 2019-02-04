@@ -14,7 +14,7 @@ ctf_preproc=${mpact_path}/../../COBRA-TF/cobra_tf/xml2ctf/xml2ctf
 
 # Convert verain to xml
 xmlfile=${filename}.xml
-command="react2xml.pl $infile ${xmlfile}"
+command=`~/master/VERAInExt/verain/scripts/react2xml.pl $infile ${xmlfile}`
 echo $command
 $command
 status=$?
