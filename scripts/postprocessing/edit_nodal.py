@@ -181,6 +181,7 @@ while True:
     for az in xrange(nz):
         print "  AXIAL LEVEL {0:4d}".format(az+1)
         print ""
+        deltaz = (nodal_axial_mesh[az+1]-nodal_axial_mesh[az])
 
         for asy in xrange(nasy):
             powasy = asy2powasy(asy+1) - 1
@@ -196,10 +197,18 @@ while True:
                 scat=np.transpose(xss[:,:,nd,az,asy]); scat[0,0]=0.0; scat[1,1]=0.0
                 ssrc=np.dot(scat,flx[:,nd,az,asy])
                 fsrc=chi[:,nd,az,asy]/keff*np.dot(nxf[:,nd,az,asy],flx[:,nd,az,asy])
+                source = (ssrc[0] + fsrc[0])*A*A*deltaz
+                loss = col[0]*A*A*deltaz
+                leakage = np.sum(cur[0:4,0,nd,az,asy])*A*deltaz + np.sum(cur[4:,0,nd,az,asy])*A*A
+                bal = [source - loss - leakage]
+                source = (ssrc[1] + fsrc[1])*V*deltaz
+                loss = col[1]*V*deltaz
+                leakage = np.sum(cur[0:4,1,nd,az,asy])*A*deltaz + np.sum(cur[4:,1,nd,az,asy])*A*A
+                bal.append(source - loss - leakage)
                 # Fluxes and cross sections
                 print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e} {9:10.4e} {10:10.4e} {11:10.4e} {12:10.4e} {13:10.4e} {14:10.4e} {15:10.4e} {16:10.4e} {17:11.4e} {18:11.4e}".format(\
                     nd+1, flx[0,nd,az,asy], flx[1,nd,az,asy], xstr[0,nd,az,asy], xstr[1,nd,az,asy], xsr[0,nd,az,asy], xsr[1,nd,az,asy], xf[0,nd,az,asy], xf[1,nd,az,asy], nxf[0,nd,az,asy], nxf[1,nd,az,asy], kxf[0,nd,az,asy], kxf[1,nd,az,asy], \
-                    chi[0,nd,az,asy], chi[1,nd,az,asy], xss[0,1,nd,az,asy], xss[1,0,nd,az,asy], (-col[0]+ssrc[0]+fsrc[0])*V-np.sum(cur[:,0,nd,az,asy])*A, (-col[1]+ssrc[1]+fsrc[1])*V-np.sum(cur[:,1,nd,az,asy])*A)
+                    chi[0,nd,az,asy], chi[1,nd,az,asy], xss[0,1,nd,az,asy], xss[1,0,nd,az,asy], bal[0], bal[1])
             print ""
 
             # Currents
