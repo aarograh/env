@@ -74,6 +74,9 @@ if sym == 1:
 else:
   print "Symmetry: quarter"
 
+axial_deltas = axial_mesh[1:]-axial_mesh[0:-1]
+fuelheight = axial_mesh[-1]-axial_mesh[0]
+
 # Set the boundary conditions
 bcond = []
 if sym == 1:
@@ -138,46 +141,67 @@ while True:
       break
 
     # Read all the state data
-    keff=h5[stateStr + '/keff'].value
-    ppw=h5[stateStr + '/pin_powers'].value
-    cur=h5[stateStr + '/NODAL_XS/CUR'].value
-    sfx=h5[stateStr + '/NODAL_XS/SFLX'].value
-    chi=h5[stateStr + '/NODAL_XS/CHI'].value
-    flx=h5[stateStr + '/NODAL_XS/FLUX'].value
-    xf=h5[stateStr + '/NODAL_XS/XSF'].value
-    nxf=h5[stateStr + '/NODAL_XS/NXSF'].value
-    kxf=h5[stateStr + '/NODAL_XS/KXSF'].value
-    xsr=h5[stateStr + '/NODAL_XS/XSRM'].value
-    xstr=h5[stateStr + '/NODAL_XS/XSTR'].value
-    xss=h5[stateStr + '/NODAL_XS/XSS'].value #First two axes are [from, to]
-    swcpv=h5[stateStr + '/NODAL_XS/CORNERFLUX'].value
-    rhowrefv=h5[stateStr + '/NODAL_XS/COOLDENS'].value # g/cc
-    tfrefv=h5[stateStr + '/NODAL_XS/FUELTEMP'].value # K
-    tfsrefv=h5[stateStr + '/NODAL_XS/FUELSURFTEMP'].value # K
-    tcolrefv=h5[stateStr + '/NODAL_XS/COOLTEMP'].value # K
-    wtfrrov=h5[stateStr + '/NODAL_XS/WETVOLFRAC'].value
-    fufrv=h5[stateStr + '/NODAL_XS/FUELVOLFRAC'].value
-    dfiv=h5[stateStr + '/NODAL_XS/I135ND'].value # 1/barn-cm
-    dpmv=h5[stateStr + '/NODAL_XS/PM149ND'].value # 1/barn-cm
-    dxev=h5[stateStr + '/NODAL_XS/SM149ND'].value # 1/barn-cm
-    dsmv=h5[stateStr + '/NODAL_XS/XE135ND'].value # 1/barn-cm
-    xxeabv=h5[stateStr + '/NODAL_XS/XE135XSAB'].value # barns
-    xsmabv=h5[stateStr + '/NODAL_XS/SM149XSAB'].value # barns
-    xhidmiv=h5[stateStr + '/NODAL_XS/CHID'].value
-    betav=h5[stateStr + '/NODAL_XS/BETA'].value
-    velocv=h5[stateStr + '/NODAL_XS/VELOCITY'].value # cm/sec
+    keff     = h5[stateStr + '/keff'].value
+    fluxnorm = h5[stateStr + '/NODAL_XS/FLUXNORM'].value
+    ppw      = h5[stateStr + '/pin_powers'].value
+    cur      = h5[stateStr + '/NODAL_XS/CUR'].value
+    sfx      = h5[stateStr + '/NODAL_XS/SFLX'].value
+    chi      = h5[stateStr + '/NODAL_XS/CHI'].value
+    flx      = h5[stateStr + '/NODAL_XS/FLUX'].value
+    xf       = h5[stateStr + '/NODAL_XS/XSF'].value
+    nxf      = h5[stateStr + '/NODAL_XS/NXSF'].value
+    kxf      = h5[stateStr + '/NODAL_XS/KXSF'].value
+    xsr      = h5[stateStr + '/NODAL_XS/XSRM'].value
+    xstr     = h5[stateStr + '/NODAL_XS/XSTR'].value
+    xss      = h5[stateStr + '/NODAL_XS/XSS'].value #First two axes are [from, to]
+    swcpv    = h5[stateStr + '/NODAL_XS/CORNERFLUX'].value
+    rhowrefv = h5[stateStr + '/NODAL_XS/COOLDENS'].value # g/cc
+    tfrefv   = h5[stateStr + '/NODAL_XS/FUELTEMP'].value # K
+    tfsrefv  = h5[stateStr + '/NODAL_XS/FUELSURFTEMP'].value # K
+    tcolrefv = h5[stateStr + '/NODAL_XS/COOLTEMP'].value # K
+    wtfrrov  = h5[stateStr + '/NODAL_XS/WETVOLFRAC'].value
+    fufrv    = h5[stateStr + '/NODAL_XS/FUELVOLFRAC'].value
+    dfiv     = h5[stateStr + '/NODAL_XS/I135ND'].value # 1/barn-cm
+    dpmv     = h5[stateStr + '/NODAL_XS/PM149ND'].value # 1/barn-cm
+    dxev     = h5[stateStr + '/NODAL_XS/SM149ND'].value # 1/barn-cm
+    dsmv     = h5[stateStr + '/NODAL_XS/XE135ND'].value # 1/barn-cm
+    xxeabv   = h5[stateStr + '/NODAL_XS/XE135XSAB'].value # barns
+    xsmabv   = h5[stateStr + '/NODAL_XS/SM149XSAB'].value # barns
+    xhidmiv  = h5[stateStr + '/NODAL_XS/CHID'].value
+    betav    = h5[stateStr + '/NODAL_XS/BETA'].value
+    velocv   = h5[stateStr + '/NODAL_XS/VELOCITY'].value # cm/sec
+    burnup   = h5[stateStr + '/NODAL_XS/BURNUP'].value #MWd/kgHM
+    ifractv  = h5[stateStr + '/NODAL_XS/RODFRAC'].value #[0.0, 1.0], 0.0 is fully withdrawn, 1.0 is fully inserted
 
     # Before we do anything convert temperatures from K to F
-    print 'test 0'
     K2F(tfrefv)
     K2F(tfsrefv)
     K2F(tcolrefv)
 
+    nasy=flx.shape[3]
+    nz=flx.shape[2]
+
+    # Calculate the axial powers - Sum radially, calculate average linear power, then normalize
+    axpow = np.sum(np.sum(np.sum(ppw,axis=0),axis=0),axis=1)
+    axpow = axpow/(np.sum(axpow*axial_deltas)/fuelheight)
+
+    # Calculate the radial powers - Sum pow*height for each pin and divide by fuel height
+    radpow = np.sum(ppw,axis=2)
+    for i in range(radpow.shape[0]):
+        for j in range(radpow.shape[1]):
+            for asy in xrange(nasy):
+                powasy = asy2powasy(asy+1)-1
+                radpow[i,j,powasy] = np.sum(ppw[i,j,:,powasy]*axial_deltas)/fuelheight
+
     print "STATE {0:4d}".format(st)
     print "-------------------------------------------------------"
     print "  k-eff: {0:7.5f}".format(keff)
-    nasy=flx.shape[3]
-    nz=flx.shape[2]
+    print "  Flux Normalization: {0:12.5e}".format(fluxnorm)
+    print ""
+    print "Axial Power"
+    for az in reversed(xrange(nz)):
+        if az >= fuelstartz-1 and az <= fuelstopz-1:
+            print "  {0:2d}    {1:10.3e}".format(az+1, axpow[az-fuelstartz])
     for az in xrange(nz):
         print "  AXIAL LEVEL {0:4d}".format(az+1)
         print ""
@@ -235,7 +259,14 @@ while True:
             if powasy >= 0 and az >= fuelstartz-1 and az <= fuelstopz-1:
                 print "Pin Powers"
                 for i in xrange(ppw.shape[0]):
-                    print '      '+' '.join('%6.4f' % ppw[i,j,az-fuelstartz,powasy] for j in xrange(ppw.shape[1]))
+                    print '      ' + ' '.join('%6.4f' % ppw[i,j,az-fuelstartz,powasy] for j in xrange(ppw.shape[1]))
+                print ""
+
+            # Radial power distribution
+            if powasy >= 0 and az == 0:
+                print "Radial Power"
+                for i in xrange(radpow.shape[0]):
+                    print '      ' + ' '.join('%6.4f' % radpow[i,j,powasy] for j in xrange(radpow.shape[1]))
                 print ""
 
             # TH Data
@@ -274,4 +305,11 @@ while True:
                 print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e}".format(\
                     nd+1, swcpv[0,0,nd,az,asy], swcpv[0,1,nd,az,asy], swcpv[1,0,nd,az,asy], swcpv[1,1,nd,az,asy], swcpv[2,0,nd,az,asy], \
                     swcpv[2,1,nd,az,asy], swcpv[3,0,nd,az,asy], swcpv[3,1,nd,az,asy])
+            print ""
+
+            # Burnup and Rod fraction
+            print "Misc."
+            print "  node  BURNUP     IFRACTV"
+            for nd in xrange(4):
+                print "  {0:1d}     {1:10.4e} {2:10.4e}".format(nd+1, burnup[nd,az,asy], ifractv[nd,az,asy])
             print ""
