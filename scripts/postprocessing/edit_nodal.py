@@ -240,7 +240,7 @@ while True:
             print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
             print "  node  1          2          1          2          1          2          1          2          1          2          1          2"
             for nd in xrange(4):
-                print "  {0:1d}    {1:10.3e} {2:10.3e} {3:10.3e} {4:10.3e} {5:10.3e} {6:10.3e} {7:10.3e} {8:10.3e} {9:10.3e} {10:10.3e} {9:11.3e} {12:10.3e}".format(\
+                print "  {0:1d}    {1:10.3e} {2:10.3e} {3:10.3e} {4:10.3e} {5:10.3e} {6:10.3e} {7:10.3e} {8:10.3e} {9:10.3e} {10:10.3e} {11:10.3e} {12:10.3e}".format(\
                     nd+1, cur[0,0,nd,az,asy], cur[0,1,nd,az,asy], cur[1,0,nd,az,asy], cur[1,1,nd,az,asy], cur[2,0,nd,az,asy], cur[2,1,nd,az,asy], cur[3,0,nd,az,asy], \
                     cur[3,1,nd,az,asy], cur[4,0,nd,az,asy], cur[4,1,nd,az,asy], cur[5,0,nd,az,asy], cur[5,1,nd,az,asy])
             print ""
@@ -250,7 +250,7 @@ while True:
             print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
             print "  node  1          2          1          2          1          2          1          2          1          2          1          2"
             for nd in xrange(4):
-                print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e} {9:10.4e} {10:10.4e} {9:11.4e} {12:10.4e}".format(\
+                print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e} {9:10.4e} {10:10.4e} {11:10.4e} {12:10.4e}".format(\
                     nd+1, sfx[0,0,nd,az,asy], sfx[0,1,nd,az,asy], sfx[1,0,nd,az,asy], sfx[1,1,nd,az,asy], sfx[2,0,nd,az,asy], sfx[2,1,nd,az,asy], sfx[3,0,nd,az,asy], \
                     sfx[3,1,nd,az,asy], sfx[4,0,nd,az,asy], sfx[4,1,nd,az,asy], sfx[5,0,nd,az,asy], sfx[5,1,nd,az,asy])
             print ""
