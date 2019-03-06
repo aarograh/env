@@ -143,6 +143,7 @@ while True:
     # Read all the state data
     keff     = h5[stateStr + '/keff'].value
     fluxnorm = h5[stateStr + '/NODAL_XS/FLUXNORM'].value
+    boron    = h5[stateStr + '/boron'].value
     ppw      = h5[stateStr + '/pin_powers'].value
     cur      = h5[stateStr + '/NODAL_XS/CUR'].value
     sfx      = h5[stateStr + '/NODAL_XS/SFLX'].value
@@ -163,8 +164,8 @@ while True:
     fufrv    = h5[stateStr + '/NODAL_XS/FUELVOLFRAC'].value
     dfiv     = h5[stateStr + '/NODAL_XS/I135ND'].value # 1/barn-cm
     dpmv     = h5[stateStr + '/NODAL_XS/PM149ND'].value # 1/barn-cm
-    dxev     = h5[stateStr + '/NODAL_XS/SM149ND'].value # 1/barn-cm
-    dsmv     = h5[stateStr + '/NODAL_XS/XE135ND'].value # 1/barn-cm
+    dsmv     = h5[stateStr + '/NODAL_XS/SM149ND'].value # 1/barn-cm
+    dxev     = h5[stateStr + '/NODAL_XS/XE135ND'].value # 1/barn-cm
     xxeabv   = h5[stateStr + '/NODAL_XS/XE135XSAB'].value # barns
     xsmabv   = h5[stateStr + '/NODAL_XS/SM149XSAB'].value # barns
     xhidmiv  = h5[stateStr + '/NODAL_XS/CHID'].value
@@ -196,6 +197,7 @@ while True:
     print "STATE {0:4d}".format(st)
     print "-------------------------------------------------------"
     print "  k-eff: {0:7.5f}".format(keff)
+    #print "  boron: {0:6.1f} ppm".format(boron)
     print "  Flux Normalization: {0:12.5e}".format(fluxnorm)
     print ""
     print "Axial Power"
