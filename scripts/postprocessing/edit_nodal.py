@@ -264,13 +264,6 @@ while True:
                     print '      ' + ' '.join('%6.4f' % ppw[i,j,az-fuelstartz,powasy] for j in xrange(ppw.shape[1]))
                 print ""
 
-            # Radial power distribution
-            if powasy >= 0 and az == 0:
-                print "Radial Power"
-                for i in xrange(radpow.shape[0]):
-                    print '      ' + ' '.join('%6.4f' % radpow[i,j,powasy] for j in xrange(radpow.shape[1]))
-                print ""
-
             # TH Data
             print "TH"
             print "  node  RHOWREFV   TCOLREFV   TFREFV     TFSREFV    WTFRROV    FUFRV"
@@ -314,4 +307,15 @@ while True:
             print "  node  BURNUP     IFRACTV"
             for nd in xrange(4):
                 print "  {0:1d}     {1:10.4e} {2:10.4e}".format(nd+1, burnup[nd,az,asy], ifractv[nd,az,asy])
+            print ""
+
+    print "Radial Powers"
+    for asy in xrange(nasy):
+        powasy = asy2powasy(asy+1) -1
+
+        # Print assembly header
+        if powasy >= 0:
+            print "    ASSEMBLY {0:4d}".format(asy+1)
+            for i in xrange(radpow.shape[0]):
+                print '      ' + ' '.join('%6.4f' % radpow[i,j,powasy] for j in xrange(radpow.shape[1]))
             print ""
