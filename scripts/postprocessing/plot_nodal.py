@@ -43,7 +43,7 @@ for st in xrange(1,nstate+1):
         #if(f==0 or f==1):
         #  return -cur[asy,nz,nd,g,f] #/sfx[asy,nz,nd,g,f]
         #return cur[asy,nz,nd,g,f]  /sfx[asy,nz,nd,g,f]
-        return adf[asy,nz,nd,g,f]
+        return adf[f,g,nd,nz,asy]
         #return sfx[asy,nz,nd,g,f]
         #return flx[asy,nz,nd,g]
         #return xsr[asy,nz,nd,g]
