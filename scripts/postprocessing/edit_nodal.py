@@ -261,7 +261,7 @@ while True:
             if powasy >= 0 and az >= fuelstartz-1 and az <= fuelstopz-1:
                 print "Pin Powers"
                 for i in xrange(ppw.shape[0]):
-                    print '      ' + ' '.join('%6.4f' % ppw[i,j,az-fuelstartz,powasy] for j in xrange(ppw.shape[1]))
+                    print '      ' + ' '.join('%6.4f' % ppw[i,j,az-fuelstartz+1,powasy] for j in xrange(ppw.shape[1]))
                 print ""
 
             # TH Data
