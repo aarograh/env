@@ -14,43 +14,19 @@ if nargs > 1:
   print helpstring
   exit(1)
 
-# Core Parameters
-material_names = ['Fuel Salt', 'INOR-8', 'Graphite', 'Cell Gas', 'Helium Gas', 'Stainlesss Steel', 'Inconel', \
-    'Control Rod Poison', 'Insulation', 'Thermal Shield', 'Homogenized Sample Basket']
-materials = {key: id for (key, id) in zip(material_names, [1,2,3,4,5,6,7,8,9,10,11])}
-reflector_radii = [70.168, 70.485, 71.12, 73.66, 76.2, 102.87, 118.11, 120.65, 156.21, 158.75]
-reflector_materials = ['Fuel Salt', 'INOR-8', 'Fuel Salt', 'INOR-8', 'Cell Gas', 'Insulation', \
-  'Stainlesss Steel', 'Thermal Shield', 'Stainlesss Steel']
-reflector_names = ['Graphite Core', 'Core Can Inner Radius', 'Core Can Outer Radius', 'Vessel Inner Radius', \
-    'Vessel Outer Radius', 'Insulation Inner Radius', 'Insulation Outer Radius', 'Thermal Shield Inner Radius', \
-    'Thermal Shield Outer Radius', 'Model Outer Radius']
-
-# Edit controls
-float_edit_format = '9.6f'
-
-# Fuel block parameters
-block_pitch = 5.08 #5.07492
-channel_length = 3.048
-channel_width = 0.508
-channel_radius = 0.508
-pins_per_module = 5
-module_height = 1.0
-
-# Sample Basket parameters
-
-# Control parameters
-
 class geomClass(object):
   _id = 0
   _nextID = 0
   _list = None
-  _height = module_height
+  _height = 0.0
 
 class pinmeshClass(geomClass):
   _nRegions = 0
 
   def __init__(self):
     self._id = pinmeshClass.getNextID()
+    self._height = assembly_height
+
     if not pinmeshClass._list:
       pinmeshClass._list = []
     pinmeshClass._list.append(self)
@@ -188,11 +164,13 @@ class pinClass(geomClass):
     if pinmesh and materials:
       self._pinmesh = pinmesh
       self._materials = materials[:]
+      self._height = assembly_height
       pinClass.addPin(self)
     elif source:
       self._id = copy.deepcopy(source._id)
       self._pinmesh = source._pinmesh
       self._materials = copy.deepcopy(source._materials)
+      self._height = copy.deepcopy(source._height)
 
   def __eq__(self, other):
     if isinstance(other, pinClass):
@@ -275,7 +253,7 @@ class pinClass(geomClass):
     print '  pin ' + format(self._id,'4d') + ' ' + format(self._pinmesh._id) + ' / ' + \
         ' '.join(str(material) for material in self._materials)
 
-class moduleClass(geomClass):
+class latticeClass(geomClass):
   _nextID = 0
   _pins = []
   _nx = 0
@@ -291,7 +269,8 @@ class moduleClass(geomClass):
         self._pins.append([])
         for i in range(nx):
           self._pins[j].append(None)
-      moduleClass.addModule(self)
+      self._height = assembly_height
+      latticeClass.addLattice(self)
     elif source:
       self._id = copy.deepcopy(source._id)
       self._pins = copy.deepcopy(source._pins)
@@ -299,9 +278,10 @@ class moduleClass(geomClass):
       self._ny = copy.deepcopy(source._ny)
       self._delx = copy.deepcopy(source._delx)
       self._dely = copy.deepcopy(source._dely)
+      self._height = copy.deepcopy(source._height)
 
   def __eq__(self, other):
-    if isinstance(other, moduleClass):
+    if isinstance(other, latticeClass):
       if self._pins[:] == other._pins[:] and self._nx == other._nx and self._ny == other._ny and \
           self._delx[:] == other._delx[:] and self._dely[:] == other._dely[:]:
         return True
@@ -312,24 +292,24 @@ class moduleClass(geomClass):
 
   @staticmethod
   def getNextID():
-    moduleClass._nextID += 1
-    return moduleClass._nextID
+    latticeClass._nextID += 1
+    return latticeClass._nextID
 
   @staticmethod
-  def addModule(module):
-    if not moduleClass._list:
-      moduleClass._list = []
-    module_is_new = True
-    for oldmodule in moduleClass._list:
-      if module == oldmodule:
-        module_is_new = False
-        del module
-        module = oldmodule
+  def addLattice(lattice):
+    if not latticeClass._list:
+      latticeClass._list = []
+    lattice_is_new = True
+    for oldlattice in latticeClass._list:
+      if lattice == oldlattice:
+        lattice_is_new = False
+        del lattice
+        lattice = oldlattice
 
-    if module_is_new:
-      module._id = moduleClass.getNextID()
-      moduleClass._list.append(module)
-    return module
+    if lattice_is_new:
+      lattice._id = latticeClass.getNextID()
+      latticeClass._list.append(lattice)
+    return lattice
 
   def setPin(self,ix,iy,pin):
     self._pins[iy-1][ix-1] = pin
@@ -368,7 +348,7 @@ class moduleClass(geomClass):
       self._dely.append(pin.getY())
 
   def replaceMaterials(self, radius, material, origin, outerRadius=10000000000.0):
-    clone = moduleClass(source=self)
+    clone = latticeClass(source=self)
     ystart = origin[1] + self.getY()
     for iy in reversed(range(self._ny)):
       ystart -= self._dely[iy]
@@ -378,7 +358,7 @@ class moduleClass(geomClass):
         corners = pin.getCorners([xstart, ystart])
         if ldebug:
           if origin[1] > 71.0:
-            print 'module:', iy, ix, ystart, xstart, ':', radius, outerRadius, ':', \
+            print 'lattice:', iy, ix, ystart, xstart, ':', radius, outerRadius, ':', \
                 pointsInCircle(corners, outerRadius), ':', pointsInCircle(corners, radius), ':', corners
         if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
           newpin = pin
@@ -393,37 +373,130 @@ class moduleClass(geomClass):
       del clone
       return self
     else:
-      return moduleClass.addModule(clone)
+      return latticeClass.addLattice(clone)
 
   @staticmethod
   def editAll():
-    [module.edit() for module in moduleClass._list]
+    [lattice.editModule() for lattice in latticeClass._list]
+    print
+    [lattice.editLattice() for lattice in latticeClass._list]
     print
 
-  def edit(self):
+  def editModule(self):
     print '  module ' + format(self._id,'3d') + ' ' + str(self._nx) + ' ' + str(self._ny) + ' 1'
     print '    ' + '\n    '.join(' '.join(format(pin._id,'4d') for pin in row) for row in self._pins)
-
-  @staticmethod
-  def editLattices():
-    [module.editLattice() for module in moduleClass._list]
-    print
 
   def editLattice(self):
     print '  lattice ' + format(self._id,'3d') + ' 1 1'
     print '    ' + format(self._id,'3d')
 
+class assemblyClass(geomClass):
+  _nextID = 0
+  _lattices = None
+  _nz = 0
+
+  def __init__(self, source=None):
+    if source:
+      self._id = copy.deepcopy(source._id)
+      self._lattices = copy.deepcopy(source._lattices)
+      self._nz = copy.deepcopy(source._nz)
+      self._height = copy.deepcopy(source._height)
+    else:
+      self._height = assembly_height
+      assemblyClass.addAssembly(self)
+
+  def __eq__(self, other):
+    if isinstance(other, assemblyClass):
+      if self._lattices != other._lattices:
+        return False
+      if self._lattices[:] == other._lattices[:] and self._nz == other._nz:
+        return True
+      else:
+        return False
+    else:
+      return False
+
   @staticmethod
-  def editAssemblies():
-    [module.editAssembly() for module in moduleClass._list]
+  def getNextID():
+    assemblyClass._nextID += 1
+    return assemblyClass._nextID
+
+  @staticmethod
+  def addAssembly(assembly):
+    if not assemblyClass._list:
+      assemblyClass._list = []
+    assembly_is_new = True
+    for oldassembly in assemblyClass._list:
+      if assembly == oldassembly:
+        assembly_is_new = False
+        del assembly
+        assembly = oldassembly
+
+    if assembly_is_new:
+      assembly._id = assemblyClass.getNextID()
+      assemblyClass._list.append(assembly)
+    return assembly
+
+  def setLattice(self,iz,lattice):
+    self._lattices[iz-1] = lattice
+
+  def getLattice(self,iz):
+    return self._lattices[iz-1]
+
+  def addTopLattice(self,lattice):
+    if self._lattices:
+      self._lattices.append(lattice)
+    else:
+      self._lattices = [lattice]
+    self._nz += 1
+
+  def addBottomLattice(self,lattice):
+    if self._lattices:
+      self._lattices.insert(0, lattice)
+    else:
+      self._lattices = [lattice]
+    self._nz += 1
+
+  def getX(self):
+    return self._lattices[0].getX()
+
+  def getY(self):
+    return self._lattices[0].getY()
+
+  def replaceMaterials(self, radius, material, origin, outerRadius=100000000000.0):
+    clone = assemblyClass(source=self)
+    for iz in range(self._nz):
+      lattice = self.getLattice(iz+1)
+      corners = lattice.getCorners(origin)
+      if ldebug:
+        print 'assembly:', iz, origin, corners, ':', radius, outerRadius, ':', lattice
+      if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
+        newlattice = lattice
+      else:
+        newlattice = lattice.replaceMaterials(radius, material, origin, outerRadius)
+      if ldebug:
+        print iz, newlattice
+      clone.setLattice(iz,newlattice)
+    if ldebug:
+      print
+
+    if clone == self:
+      del clone
+      return self
+    else:
+      return assemblyClass.addAssembly(clone)
+
+  @staticmethod
+  def editAll():
+    [assembly.edit() for assembly in assemblyClass._list]
     print
 
-  def editAssembly(self):
+  def edit(self):
     print '  assembly ' + format(self._id,'3d')
-    print '    ' + format(self._id,'3d')
+    print '    ' + ' '.join(format(lattice._id,'4d') for lattice in self._lattices)
 
 class coreClass:
-  _modules = []
+  _assemblies = []
   _nx = 0
   _ny = 0
   _delx = []
@@ -434,17 +507,17 @@ class coreClass:
     self._nx = nx
     self._ny = ny
     for j in range(ny):
-      self._modules.append([])
+      self._assemblies.append([])
       for i in range(nx):
-        self._modules[j].append(None)
+        self._assemblies[j].append(None)
 
-  def setModule(self,ix,iy,module):
-    self._modules[iy-1][ix-1] = module
+  def setAssembly(self,ix,iy,assembly):
+    self._assemblies[iy-1][ix-1] = assembly
 
-  def getModule(self,ix,iy):
-    return self._modules[iy-1][ix-1]
+  def getAssembly(self,ix,iy):
+    return self._assemblies[iy-1][ix-1]
 
-  def getModuleCorners(self,ix,iy):
+  def getAssemblyCorners(self,ix,iy):
     corners = []
     for (x, y) in zip([ix-1, ix, ix-1, ix], [iy-1, iy-1, iy, iy]):
       corners.append([sum(self._delx[0:x])-self._offset[0], sum(self._dely[0:y])-self._offset[1]])
@@ -453,12 +526,12 @@ class coreClass:
   def update(self):
     self._delx = []
     for i in range(self._nx):
-      module = self.getModule(i+1,1)
-      self._delx.append(module.getX())
+      assembly = self.getAssembly(i+1,1)
+      self._delx.append(assembly.getX())
     self._dely = []
     for i in range(self._ny):
-      module = self.getModule(1,i+1)
-      self._dely.append(module.getY())
+      assembly = self.getAssembly(1,i+1)
+      self._dely.append(assembly.getY())
     self._offset = [sum(self._delx)/2.0, sum(self._dely)/2.0]
 
   def makeJagged(self, radius):
@@ -466,10 +539,10 @@ class coreClass:
     for iy in reversed(range(self._ny)):
       xstart = -self._offset[0]
       for ix in range(self._nx):
-        module = self.getModule(ix+1,iy+1)
-        corners = module.getCorners([xstart, ystart])
+        assembly = self.getAssembly(ix+1,iy+1)
+        corners = assembly.getLattice(1).getCorners([xstart, ystart])
         if not any(pointsInCircle(corners, radius)):
-          self.setModule(ix+1,iy+1,None)
+          self.setAssembly(ix+1,iy+1,None)
         xstart += self._delx[ix]
       ystart += self._dely[iy]
 
@@ -478,17 +551,19 @@ class coreClass:
     for iy in reversed(range(self._ny)):
       xstart = -self._offset[0]
       for ix in range(self._nx):
-        module = self.getModule(ix+1,iy+1)
-        if module:
-          corners = module.getCorners([xstart, ystart])
+        assembly = self.getAssembly(ix+1,iy+1)
+        if assembly:
+          corners = assembly.getLattice(1).getCorners([xstart, ystart])
           if ldebug:
             if iy == 0:
               print 'core:', iy, ix, ystart, xstart, ':', radius, outerRadius
           if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
-              newmodule = module
+              newAssembly = assembly
           else:
-            newmodule = module.replaceMaterials(radius, material, [xstart, ystart], outerRadius)
-          self.setModule(ix+1,iy+1,newmodule)
+            newAssembly = assembly.replaceMaterials(radius, material, [xstart, ystart], outerRadius)
+          if ldebug:
+            print iy, ix, newAssembly
+          self.setAssembly(ix+1,iy+1,newAssembly)
         xstart += self._delx[ix]
         if ldebug:
           print
@@ -496,16 +571,16 @@ class coreClass:
 
   def edit(self, onlyCore=False):
     if not onlyCore:
-      # print the module dimensions
-      module = None
+      # print the lattice dimensions
+      assembly = None
       for iy in range(self._ny):
         for ix in range(self._nx):
-          module = self.getModule(ix+1,iy+1)
-          if module:
+          assembly = self.getAssembly(ix+1,iy+1)
+          if assembly:
             break
-        if module:
+        if assembly:
           break
-      print '  mod_dim ' + ' '.join(format(value,float_edit_format) for value in [module.getX(), module.getY(), module_height])
+      print '  mod_dim ' + ' '.join(format(value,float_edit_format) for value in [assembly.getX(), assembly.getY(), assembly_height])
       print
 
       # Print the pin meshes
@@ -514,26 +589,23 @@ class coreClass:
       # Print the pins
       pinClass.editAll()
 
-      # Print the modules
-      moduleClass.editAll()
-
-      # Print the lattices
-      moduleClass.editLattices()
+      # Print the modules and lattices
+      latticeClass.editAll()
 
       # Print the assemblies
-      moduleClass.editAssemblies()
+      assemblyClass.editAll()
 
     # Print the core
     print "  core 360"
     for j in range(self._ny):
-      print '    ' + ' '.join(format(module._id,'3d') if module else '   ' for module in self._modules[j])
+      print '    ' + ' '.join(format(assembly._id,'3d') if assembly else '   ' for assembly in self._assemblies[j])
 
 def buildGraphiteStringer():
-  newModule = moduleClass(pins_per_module, pins_per_module)
+  newLattice = latticeClass(pins_per_lattice, pins_per_lattice)
 
   # Useful values
   cell_length_long = channel_length - 2*channel_radius
-  cell_length_short = (block_pitch - cell_length_long)/(pins_per_module - 1)
+  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
   nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
   nsub_long = 2*nsub_short
 
@@ -543,97 +615,100 @@ def buildGraphiteStringer():
       [1 for i in range(nsub_short)])
   newPin = pinClass(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_short)])
   for (ix, iy) in zip([1, 2, 4, 5, 1, 2, 4, 5], [1, 2, 2, 1, 5, 4, 4, 5]):
-    newModule.setPin(ix,iy,newPin)
+    newLattice.setPin(ix,iy,newPin)
 
   # Set the center pin cell
   newPinMesh = pinmeshClass_rect([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
       [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_long)], \
       [1 for i in range(nsub_long)])
   newPin = pinClass(newPinMesh, [materials['Graphite'] for i in range(nsub_long*nsub_long)])
-  newModule.setPin(3,3,newPin)
+  newLattice.setPin(3,3,newPin)
 
   # Set the E/W rectangular graphite pieces
   newPinMesh = pinmeshClass_rect([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
       [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
       [1 for i in range(nsub_long)])
   newPin = pinClass(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_long)])
-  newModule.setPin(2,3,newPin)
-  newModule.setPin(4,3,newPin)
+  newLattice.setPin(2,3,newPin)
+  newLattice.setPin(4,3,newPin)
 
   # Set the W/E fuel channel sides
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite', \
       'Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt', \
       'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite']])
-  newModule.setPin(1,3,newPin)
+  newLattice.setPin(1,3,newPin)
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Graphite','Fuel Salt','Fuel Salt', \
       'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt', \
       'Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt']])
-  newModule.setPin(5,3,newPin)
+  newLattice.setPin(5,3,newPin)
 
   # Set the N/S rectangular graphite pieces
   newPinMesh = pinmeshClass_rect([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
       [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_long)], \
       [1 for i in range(nsub_short)])
   newPin = pinClass(newPinMesh, [materials['Graphite'] for i in range(nsub_long*nsub_short)])
-  newModule.setPin(3,2,newPin)
-  newModule.setPin(3,4,newPin)
+  newLattice.setPin(3,2,newPin)
+  newLattice.setPin(3,4,newPin)
 
   # Set the N/S fuel channel sides
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Fuel Salt', \
       'Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt', \
       'Fuel Salt','Graphite','Graphite','Graphite','Graphite','Graphite','Graphite']])
-  newModule.setPin(3,1,newPin)
+  newLattice.setPin(3,1,newPin)
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Graphite','Graphite','Graphite','Graphite', \
       'Graphite','Graphite','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt', \
       'Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt']])
-  newModule.setPin(3,5,newPin)
+  newLattice.setPin(3,5,newPin)
 
   # Set the NE quarter pins
   newPinMesh = pinmeshClass_qcyl([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
       [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, 1)
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newModule.setPin(1,2,newPin)
-  newModule.setPin(4,5,newPin)
+  newLattice.setPin(1,2,newPin)
+  newLattice.setPin(4,5,newPin)
 
   # Set the NW quarter pins
   newPinMesh = pinmeshClass_qcyl([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
       [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, 2)
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newModule.setPin(5,2,newPin)
-  newModule.setPin(2,5,newPin)
+  newLattice.setPin(5,2,newPin)
+  newLattice.setPin(2,5,newPin)
 
   # Set the SW quarter pins
   newPinMesh = pinmeshClass_qcyl([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
       [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, 3)
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newModule.setPin(2,1,newPin)
-  newModule.setPin(5,4,newPin)
+  newLattice.setPin(2,1,newPin)
+  newLattice.setPin(5,4,newPin)
 
   # Set the SE quarter pins
   newPinMesh = pinmeshClass_qcyl([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
       [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, 4)
   newPin = pinClass(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newModule.setPin(4,1,newPin)
-  newModule.setPin(1,4,newPin)
+  newLattice.setPin(4,1,newPin)
+  newLattice.setPin(1,4,newPin)
 
-  newModule.update()
-  return newModule
+  newLattice.update()
 
-def buildGraphiteBlock(stringer):
-  newModule = moduleClass(source=stringer)
+  return newLattice
+
+def fillBlock(stringer):
+  newLattice = latticeClass(source=stringer)
 
   # Copy non-fuel pins
   for (ix,iy) in zip([1,5,2,3,4,2,3,4,2,3,4,1,5],[1,1,2,2,2,3,3,3,4,4,4,5,5]):
-    newModule.setPin(ix,iy,stringer.getPin(ix,iy))
+    newLattice.setPin(ix,iy,stringer.getPin(ix,iy))
 
   # Now copy graphite pins from non-fuel locations to fuel locations
   for (ix1,iy1,ix2,iy2) in zip([3,1,5,3,2,4,1,5,1,5,2,4],[1,3,3,5,1,1,2,2,4,4,5,5],\
       [3,2,4,3,1,1,1,1,1,1,1,1],[2,3,3,4,1,1,1,1,1,1,1,1]):
-    newModule.setPin(ix1,iy1,stringer.getPin(ix2,iy2))
+    newLattice.setPin(ix1,iy1,stringer.getPin(ix2,iy2))
 
-  newModule.update()
-  moduleClass.addModule(newModule)
-  return newModule
+  newLattice.update()
+  newLattice = latticeClass.addLattice(newLattice)
+  newLattice = newLattice.replaceMaterials(0.0, materials['Cell Gas'], [0.0, 0.0])
+
+  return newLattice
 
 def pointsInCircle(points, radius, origin=[0.0, 0.0]):
   inside = []
@@ -641,30 +716,59 @@ def pointsInCircle(points, radius, origin=[0.0, 0.0]):
     inside.append((coordinates[0]+origin[0])**2.0 + (coordinates[1]+origin[1])**2.0 <= radius**2.0)
   return inside
 
+# Core Parameters
+material_names = ['Fuel Salt', 'INOR-8', 'Graphite', 'Cell Gas', 'Helium Gas', 'Stainlesss Steel', 'Inconel', \
+    'Control Rod Poison', 'Insulation', 'Thermal Shield', 'Homogenized Sample Basket']
+materials = {key: id for (key, id) in zip(material_names, [1,2,3,4,5,6,7,8,9,10,11])}
+reflector_radii = [70.168, 70.485, 71.12, 73.66, 76.2]#, 102.87, 118.11, 120.65, 156.21, 158.75]
+reflector_materials = ['Fuel Salt', 'INOR-8', 'Fuel Salt', 'INOR-8', 'Cell Gas', 'Insulation', \
+  'Stainlesss Steel', 'Thermal Shield', 'Stainlesss Steel']
+reflector_names = ['Graphite Core', 'Core Can Inner Radius', 'Core Can Outer Radius', 'Vessel Inner Radius', \
+    'Vessel Outer Radius', 'Insulation Inner Radius', 'Insulation Outer Radius', 'Thermal Shield Inner Radius', \
+    'Thermal Shield Outer Radius', 'Model Outer Radius']
+
+# Edit controls
+float_edit_format = '9.6f'
+
+# Fuel block parameters
+block_pitch = 5.08 #5.07492
+channel_length = 3.048
+channel_width = 0.508
+channel_radius = 0.508
+pins_per_lattice = 5
+assembly_height = 10.16
+
+# Sample Basket parameters
+
+# Control parameters
+
 ldebug = False
-# Calculate how many modules we need in the core
-modules_across_core = int(np.ceil(max(reflector_radii)/block_pitch))*2
-core = coreClass(modules_across_core, modules_across_core)
+# Calculate how many lattices we need in the core
+assemblies_across_core = int(np.ceil(max(reflector_radii)/block_pitch))*2
+core = coreClass(assemblies_across_core, assemblies_across_core)
 
-# Build the basic modules: graphite stringer, solid graphite block
-graphiteStringerModule = buildGraphiteStringer()
-graphiteBlockModule = buildGraphiteBlock(graphiteStringerModule)
+# Build the basic lattices: graphite stringer, solid graphite block
+graphiteStringerAssembly = assemblyClass()
+graphiteStringerAssembly.addTopLattice(buildGraphiteStringer())
 
-# Set all core modules to the graphite stringer
+fillAssembly = assemblyClass()
+fillAssembly.addTopLattice(fillBlock(graphiteStringerAssembly.getLattice(0)))
+
+# Set all core lattices to the graphite stringer
 for iy in range(core._ny):
   for ix in range(core._nx):
-    core.setModule(ix+1,iy+1,graphiteStringerModule)
+    core.setAssembly(ix+1,iy+1,graphiteStringerAssembly)
 
 core.update()
 
-# Now set all the modules outside the graphite lattice radius
+# Now set all the lattices outside the graphite lattice radius
 for iy in reversed(range(core._ny)):
   for ix in reversed(range(core._nx)):
     allOutside = True
-    for inside in pointsInCircle(core.getModuleCorners(ix+1,iy+1), reflector_radii[0]):
+    for inside in pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0]):
       allOutside = allOutside and not inside
     if allOutside:
-      core.setModule(ix+1,iy+1,graphiteBlockModule)
+      core.setAssembly(ix+1,iy+1,fillAssembly)
 
 core.makeJagged(reflector_radii[-1])
 
@@ -677,5 +781,9 @@ for zone in xrange(0,len(reflector_radii)-1):
   else:
     core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
 
+# Extrude the core to the full fuel height
+
 if not ldebug:
   core.edit()
+else:
+  core.edit(False)
