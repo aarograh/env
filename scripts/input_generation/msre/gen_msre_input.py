@@ -407,20 +407,23 @@ class pinClass(geomClass):
 
 class latticeClass(geomClass):
   _nextID = 0
-  _pins = []
+  _pins = None
   _nx = 0
   _ny = 0
-  _delx = []
-  _dely = []
+  _delx = None
+  _dely = None
 
   def __init__(self, nx=None, ny=None, source=None):
     if nx and ny:
       self._nx = nx
       self._ny = ny
+      self._pins = []
       for j in range(ny):
         self._pins.append([])
         for i in range(nx):
           self._pins[j].append(None)
+      self._delx = [-1.0]*self._nx
+      self._dely = [-1.0]*self._ny
       self._height = assembly_height
       latticeClass.addObject(self)
     elif source:
@@ -431,6 +434,11 @@ class latticeClass(geomClass):
       self._delx = copy.deepcopy(source._delx)
       self._dely = copy.deepcopy(source._dely)
       self._height = copy.deepcopy(source._height)
+
+  @classmethod
+  def create(cls, nx=None, ny=None, source=None):
+    newObject = latticeClass(nx, ny, source)
+    return cls.testCreation(newObject, latticeClass.addObject(newObject))
 
   def __eq__(self, other):
     if isinstance(other, latticeClass):
@@ -464,6 +472,14 @@ class latticeClass(geomClass):
 
   def setPin(self,ix,iy,pin):
     self._pins[iy-1][ix-1] = pin
+    if self._delx[ix-1] > 0.0 and self._delx[ix-1] != pin.getX():
+      raise ValueError
+    else:
+      self._delx[ix-1] = pin.getX()
+    if self._dely[iy-1] > 0.0 and self._dely[iy-1] != pin.getY():
+      raise ValueError
+    else:
+      self._dely[iy-1] = pin.getY()
 
   def getPin(self,ix,iy):
     return self._pins[iy-1][ix-1]
@@ -487,16 +503,6 @@ class latticeClass(geomClass):
     corners.append([offset[0], offset[1] + self.getY()])
     corners.append([offset[0] + self.getX(), offset[1] + self.getY()])
     return corners
-
-  def update(self):
-    self._delx = []
-    for i in range(self._nx):
-      pin = self.getPin(i+1,1)
-      self._delx.append(pin.getX())
-    self._dely = []
-    for i in range(self._ny):
-      pin = self.getPin(1,i+1)
-      self._dely.append(pin.getY())
 
   def replaceMaterials(self, radius, material, origin, outerRadius=10000000000.0):
     clone = latticeClass(source=self)
@@ -701,7 +707,7 @@ class assemblyClass(geomClass):
     self.addTopLattice(newLattice)
 
   def extrudeBottom(self, height):
-    lattice = getLattice(1)
+    lattice = self.getLattice(1)
     if lattice._height == height:
       newLattice = lattice
     else:
@@ -882,49 +888,23 @@ class coreClass:
     for j in range(self._ny):
       print '    ' + ' '.join(format(assembly._id,'3d') if assembly else '   ' for assembly in self._assemblies[j])
 
-def buildGraphiteStringer():
-  newLattice = latticeClass(pins_per_lattice, pins_per_lattice)
+def buildGraphiteBlockCenter():
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
 
   # Useful values
   cell_length_long = channel_length - 2*channel_radius
   cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
   nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
   nsub_long = 2*nsub_short
+  salt_width = 0.47625
 
   # Set the small graphite square pins - 4 corners and 4 diagonal locations (excluding center)
-  newPinMesh = pinmeshClass_rect.create(x=[cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      y=[cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      subx=[1 for i in range(nsub_short)], \
-      suby=[1 for i in range(nsub_short)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_short)])
-  for (ix, iy) in zip([1, 2, 4, 5, 1, 2, 4, 5], [1, 2, 2, 1, 5, 4, 4, 5]):
-    newLattice.setPin(ix,iy,newPin)
-
-
-  # Set the center pin cell
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_long)], \
-      [1 for i in range(nsub_long)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_long*nsub_long)])
-  newLattice.setPin(3,3,newPin)
-
-  # Set the E/W rectangular graphite pieces
   newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_long)])
-  newLattice.setPin(2,3,newPin)
-  newLattice.setPin(4,3,newPin)
-
-  # Set the W/E fuel channel sides
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite', \
-      'Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt', \
-      'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite']])
-  newLattice.setPin(1,3,newPin)
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Graphite','Fuel Salt','Fuel Salt', \
-      'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt', \
-      'Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt']])
-  newLattice.setPin(5,3,newPin)
+      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
+      [1 for i in range(nsub_short)])
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_short)])
+  for (ix, iy) in zip([2, 4, 2, 4], [2, 2, 4, 4]):
+    newLattice.setPin(ix,iy,newPin)
 
   # Set the N/S rectangular graphite pieces
   newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
@@ -934,7 +914,49 @@ def buildGraphiteStringer():
   newLattice.setPin(3,2,newPin)
   newLattice.setPin(3,4,newPin)
 
+  # Set the E/W rectangular graphite pieces
+  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
+      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
+      [1 for i in range(nsub_long)])
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_long)])
+  newLattice.setPin(2,3,newPin)
+  newLattice.setPin(4,3,newPin)
+
+  # Set the center pin cell
+  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
+      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_long)], \
+      [1 for i in range(nsub_long)])
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_long*nsub_long)])
+  newLattice.setPin(3,3,newPin)
+
+  return newLattice
+
+def buildGraphiteStringer():
+  newLattice = buildGraphiteBlockCenter()
+
+  # Useful values
+  cell_length_long = channel_length - 2*channel_radius
+  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
+  nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
+  nsub_long = 2*nsub_short
+
+  newPin = newLattice.getPin(2,2)
+  for (ix, iy) in zip([1, 5, 1, 5], [1, 1, 5, 5]):
+    newLattice.setPin(ix,iy,newPin)
+
+  # Set the W/E fuel channel sides
+  newPinMesh = newLattice.getPin(2,3)._pinmesh
+  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite', \
+      'Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt', \
+      'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite']])
+  newLattice.setPin(1,3,newPin)
+  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Graphite','Fuel Salt','Fuel Salt', \
+      'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt', \
+      'Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt']])
+  newLattice.setPin(5,3,newPin)
+
   # Set the N/S fuel channel sides
+  newPinMesh = newLattice.getPin(3,2)._pinmesh
   newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Fuel Salt', \
       'Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt', \
       'Fuel Salt','Graphite','Graphite','Graphite','Graphite','Graphite','Graphite']])
@@ -972,30 +994,29 @@ def buildGraphiteStringer():
   newLattice.setPin(4,1,newPin)
   newLattice.setPin(1,4,newPin)
 
-  newLattice.update()
+  return newLattice.addObject(newLattice)
 
-  return newLattice
+def fillBlock():
+  newLattice = buildGraphiteBlockCenter()
 
-def fillBlock(stringer):
-  newLattice = latticeClass(source=stringer)
+  # Copy small graphite blocks
+  for (ix,iy) in zip([1, 2, 4, 5, 1, 5, 1, 5, 1, 2, 4, 5], [1, 1, 1, 1, 2, 2, 4, 4, 5, 5, 5, 5]):
+    newLattice.setPin(ix,iy,newLattice.getPin(2,2))
 
-  # Copy non-fuel pins
-  for (ix,iy) in zip([1,5,2,3,4,2,3,4,2,3,4,1,5],[1,1,2,2,2,3,3,3,4,4,4,5,5]):
-    newLattice.setPin(ix,iy,stringer.getPin(ix,iy))
+  # Copy E/W graphite blocks
+  newLattice.setPin(1,3,newLattice.getPin(2,3))
+  newLattice.setPin(5,3,newLattice.getPin(2,3))
 
-  # Now copy graphite pins from non-fuel locations to fuel locations
-  for (ix1,iy1,ix2,iy2) in zip([3,1,5,3,2,4,1,5,1,5,2,4],[1,3,3,5,1,1,2,2,4,4,5,5],\
-      [3,2,4,3,1,1,1,1,1,1,1,1],[2,3,3,4,1,1,1,1,1,1,1,1]):
-    newLattice.setPin(ix1,iy1,stringer.getPin(ix2,iy2))
+  # Copy N/S graphite blocks
+  newLattice.setPin(3,1,newLattice.getPin(3,2))
+  newLattice.setPin(3,5,newLattice.getPin(3,2))
 
-  newLattice.update()
-  newLattice = latticeClass.addObject(newLattice)
   newLattice = newLattice.replaceMaterials(0.0, materials['Cell Gas'], [0.0, 0.0])
 
-  return newLattice
+  return newLattice.addObject(newLattice)
 
 def buildSupportLattice1():
-  newLattice = latticeClass(pins_per_lattice, pins_per_lattice)
+  newLattice = buildGraphiteBlockCenter()
 
   # Useful values
   cell_length_long = channel_length - 2*channel_radius
@@ -1004,50 +1025,25 @@ def buildSupportLattice1():
   nsub_long = 2*nsub_short
   salt_width = 0.47625
 
-  # Set the small graphite square pins - 4 corners and 4 diagonal locations (excluding center)
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_short)])
-  print newPinMesh._id, newPin._id, newPinMesh, newPin
-  for (ix, iy) in zip([2, 4, 2, 4, 2, 4, 2, 4], [1, 1, 2, 2, 4, 4, 5, 5]):
-    newLattice.setPin(ix,iy,newPin)
+  # Copy the center portions to the N/S edges
+  newPin = newLattice.getPin(3,2)
+  newLattice.setPin(3,1,newPin)
+  newLattice.setPin(3,5,newPin)
 
-  # Set the N/S rectangular graphite pieces
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_long)], \
-      [1 for i in range(nsub_short)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_long*nsub_short)])
-  print newPinMesh._id, newPin._id
-  for iy in [1, 2, 4, 5]:
-    newLattice.setPin(3,iy,newPin)
-
-  # Set the E/W rectangular graphite pieces
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_short*nsub_long)])
-  print newPinMesh._id, newPin._id
-  newLattice.setPin(2,3,newPin)
-  newLattice.setPin(4,3,newPin)
-
-  # Set the center pin cell
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_long)], \
-      [1 for i in range(nsub_long)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] for i in range(nsub_long*nsub_long)])
-  print newPinMesh._id, newPin._id
-  newLattice.setPin(3,3,newPin)
+  newPin = newLattice.getPin(2,2)
+  newLattice.setPin(2,1,newPin)
+  newLattice.setPin(2,5,newPin)
+  newLattice.setPin(4,1,newPin)
+  newLattice.setPin(4,5,newPin)
 
   # Set the W small salt/graphite squares
   newPinMesh = pinmeshClass_rect.create([salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
       [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)])
+      [1 for i in range(nsub_short)])
   tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]
   mats = []
   mats = [mats + tmpmats for i in range(nsub_short)]
   newPin = pinClass.create(newPinMesh, mats)
-  print newPinMesh._id, newPin._id
   for iy in [1, 2, 4, 5]:
     newLattice.setPin(1,iy,newPin)
 
@@ -1059,19 +1055,17 @@ def buildSupportLattice1():
   mats = []
   mats = [mats + tmpmats for i in range(nsub_short)]
   newPin = pinClass.create(newPinMesh, mats)
-  print newPinMesh._id, newPin._id
   for iy in [1, 2, 4, 5]:
     newLattice.setPin(5,iy,newPin)
 
   # Set the W long salt/graphite rectangles
   newPinMesh = pinmeshClass_rect.create([salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
       [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)])
+      [1 for i in range(nsub_short)])
   tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]
   mats = []
   mats = [mats + tmpmats for i in range(nsub_long)]
   newPin = pinClass.create(newPinMesh, mats)
-  print newPinMesh._id, newPin._id
   newLattice.setPin(1,3,newPin)
 
   # Set the E long salt/graphite rectangles
@@ -1082,8 +1076,74 @@ def buildSupportLattice1():
   mats = []
   mats = [mats + tmpmats for i in range(nsub_long)]
   newPin = pinClass.create(newPinMesh, mats)
-  print newPinMesh._id, newPin._id
   newLattice.setPin(5,3,newPin)
+
+  return newLattice
+
+def buildSupportLattice2():
+  newLattice = buildGraphiteBlockCenter()
+
+  # Useful values
+  cell_length_long = channel_length - 2*channel_radius
+  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
+  nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
+  nsub_long = 2*nsub_short
+  salt_width = 0.47625
+
+  # Copy the center portions to the E/W edges
+  newPin = newLattice.getPin(2,3)
+  newLattice.setPin(1,3,newPin)
+  newLattice.setPin(5,3,newPin)
+
+  newPin = newLattice.getPin(2,2)
+  newLattice.setPin(1,2,newPin)
+  newLattice.setPin(5,2,newPin)
+  newLattice.setPin(1,4,newPin)
+  newLattice.setPin(5,4,newPin)
+
+  # Set the N small salt/graphite squares
+  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
+      [salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
+      [1 for i in range(nsub_short)], [1 for i in range(nsub_short)])
+  tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]
+  mats = []
+  mats = [mats + tmpmats for i in range(nsub_short)]
+  newPin = pinClass.create(newPinMesh, mats)
+  for ix in [1, 2, 4, 5]:
+    newLattice.setPin(ix,1,newPin)
+
+  # Set the S small salt/graphite squares
+  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
+      [salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
+      [1 for i in range(nsub_short)], [1 for i in range(nsub_short)])
+  tmpmats = [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]
+  mats = []
+  mats = [mats + tmpmats for i in range(nsub_short)]
+  newPin = pinClass.create(newPinMesh, mats)
+  for ix in [1, 2, 4, 5]:
+    newLattice.setPin(ix,5,newPin)
+
+  # Set the N long salt/graphite squares
+  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
+      [salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
+      [1 for i in range(nsub_long)], [1 for i in range(nsub_short)])
+  tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_long*nsub_short else materials['Graphite'] for i in range(nsub_long*nsub_short)]
+  mats = []
+  mats = [mats + tmpmats for i in range(nsub_short)]
+  newPin = pinClass.create(newPinMesh, mats)
+  newLattice.setPin(3,1,newPin)
+
+  # Set the S long salt/graphite squares
+  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
+      [salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
+      [1 for i in range(nsub_long)], [1 for i in range(nsub_short)])
+  tmpmats = [materials['Graphite'] if (i+1)*3 <= nsub_long*nsub_short else materials['Fuel Salt'] for i in range(nsub_long*nsub_short)]
+  mats = []
+  mats = [mats + tmpmats for i in range(nsub_short)]
+  newPin = pinClass.create(newPinMesh, mats)
+  newLattice.setPin(3,5,newPin)
+
+  return newLattice
 
 def pointsInCircle(points, radius, origin=[0.0, 0.0]):
   inside = []
@@ -1135,7 +1195,7 @@ graphiteStringerAssembly = assemblyClass()
 graphiteStringerAssembly.addTopLattice(buildGraphiteStringer())
 
 fillAssembly = assemblyClass()
-fillAssembly.addTopLattice(fillBlock(graphiteStringerAssembly.getLattice(0)))
+fillAssembly.addTopLattice(fillBlock())
 
 # Set all core lattices to the graphite stringer
 for iy in range(core._ny):
@@ -1147,7 +1207,7 @@ core.update()
 # Now set all the lattices outside the graphite lattice radius
 for iy in reversed(range(core._ny)):
   for ix in range(core._nx):
-    if all([not value for value in pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])]):
+    if all([not inCircle for inCircle in pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])]):
       core.setAssembly(ix+1,iy+1,fillAssembly)
 
 core.makeJagged(reflector_radii[-1])
@@ -1163,44 +1223,59 @@ pruneUnusedObjects(core)
 # Extrude the core to the full fuel height (add 15 more planes)
 core.extrudeTop(assembly_height, n_fuel_planes-1)
 
+# For assemblies with at least one corner inside the inner radius, add the bottom graphite lattices
+supportLattice1 = buildSupportLattice1()
+supportLattice2 = buildSupportLattice2()
+latticeAdded = []
+for iy in range(core._ny):
+  latticeAdded.append([])
+  for ix in range(core._nx):
+    latticeAdded[iy].append(False)
+for iy in reversed(range(core._ny)):
+  for ix in range(core._nx):
+    assembly = core.getAssembly(ix+1,iy+1)
+    if assembly:
+      if latticeAdded[ix][iy]:
+        continue
+      if any(pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])):
+        assembly.addBottomLattice(supportLattice1)
+        assembly.addBottomLattice(supportLattice2)
+      else:
+        assembly.extrudeBottom(supportLattice1._height)
+        assembly.extrudeBottom(supportLattice2._height)
+      for iy2 in range(core._ny):
+        for ix2 in range(core._nx):
+          assembly2 = core.getAssembly(ix2+1,iy2+1)
+          if assembly2:
+            if assembly2._id == assembly._id:
+              latticeAdded[ix2][iy2] = True
+
 if not ldebug:
   core.edit()
 else:
   core.edit(False)
 
-# For assemblies with at least one corner inside the inner radius, add the bottom graphite lattices
-supportLattice1 = buildSupportLattice1()
-supportLattice2 = buildSupportLattice2()
-for iy in reversed(range(core._ny)):
-  for ix in range(core._nx):
-    if any(pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])):
-      assembly = core.getAssembly(ix+1,iy+1)
-      assembly.addBottomLattice(supportLattice2)
-      assembly.addBottomLattice(supportLattice1)
-
 # For assemblies with at least one corner inside the inner radius, shave them.  Do this for
 # all radii that the assemblies straddle
-for iy in reversed(range(core._ny)):
-  for ix in range(core._nx):
-    inCircle = pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])
-    if any(inCircle):
-      for zone in xrange(0,len(reflector_radii)-1):
-        radius = reflector_radii[zone]
-        material = reflector_materials[zone]
-        region = reflector_names[zone]
-        outCircle = not pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), radius)
-        if any(outCircle):
-          if zone == len(reflector_radii)-1:
-            core.replaceMaterials(radius, materials[material])
-          else:
-            core.replaceMaterials(radius,materials[material], reflector_radii[zone+1])
+# for iy in reversed(range(core._ny)):
+#   for ix in range(core._nx):
+#     if any(pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])):
+#       for zone in xrange(0,len(reflector_radii)-1):
+#         radius = reflector_radii[zone]
+#         material = reflector_materials[zone]
+#         region = reflector_names[zone]
+#         if any([not inCircle for inCircle in pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), radius)]):
+#           if zone == len(reflector_radii)-1:
+#             core.replaceMaterials(radius, materials[material])
+#           else:
+#             core.replaceMaterials(radius,materials[material], reflector_radii[zone+1])
 
 # For assemblies that did not have the bottom lattice added, extrude them downward
-for iy in reversed(range(core._ny)):
-  for ix in range(core._nx):
-    assembly = core.getAssembly(ix+1,iy+1)
-    if assembly._nz < n_fuel_planes+2:
-      assembly.extrudeBottom(supportLattice1._height)
-      assembly.extrudeBottom(supportLattice1._height)
+# for iy in reversed(range(core._ny)):
+#   for ix in range(core._nx):
+#     assembly = core.getAssembly(ix+1,iy+1)
+#     if assembly._nz < n_fuel_planes+2:
+#       assembly.extrudeBottom(supportLattice1._height)
+#       assembly.extrudeBottom(supportLattice1._height)
 
 # Do the same for the top
