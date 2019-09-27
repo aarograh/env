@@ -291,6 +291,9 @@ class pinClass(geomClass):
     if pinmesh and materials:
       self._pinmesh = pinmesh
       self._materials = materials[:]
+      for material in materials:
+        if isinstance(material, list):
+          raise ValueError
       self._height = assembly_height
     elif source:
       self._id = copy.deepcopy(source._id)
@@ -677,18 +680,23 @@ class assemblyClass(geomClass):
 
   def replaceMaterials(self, radius, material, origin, outerRadius=100000000000.0):
     clone = assemblyClass(source=self)
-    for iz in range(self._nz):
-      lattice = self.getLattice(iz+1)
-      corners = lattice.getCorners(origin)
-      if ldebug:
-        print 'assembly:', iz, origin, corners, ':', radius, outerRadius, ':', lattice
-      if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
-        newlattice = lattice
-      else:
+    lattice = self.getLattice(1)
+    corners = lattice.getCorners(origin)
+    if ldebug:
+      print 'assembly:', iz, origin, corners, ':', radius, outerRadius, ':', lattice
+    if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
+      pass
+    else:
+      for iz in range(self._nz):
+        lattice = self.getLattice(iz+1)
+        if iz > 0:
+          if lattice is self.getLattice(iz):
+            clone.setLattice(iz+1,clone.getLattice(iz))
+            continue
         newlattice = lattice.replaceMaterials(radius, material, origin, outerRadius)
-      if ldebug:
-        print iz, newlattice
-      clone.setLattice(iz,newlattice)
+        if ldebug:
+          print iz, newlattice
+        clone.setLattice(iz+1,newlattice)
     if ldebug:
       print
 
@@ -746,8 +754,8 @@ class coreClass:
   _assemblies = []
   _nx = 0
   _ny = 0
-  _delx = []
-  _dely = []
+  _delx = None
+  _dely = None
   _offset = []
 
   def __init__(self,nx,ny):
@@ -757,9 +765,22 @@ class coreClass:
       self._assemblies.append([])
       for i in range(nx):
         self._assemblies[j].append(None)
+    self._delx = [-1.0]*self._nx
+    self._dely = [-1.0]*self._ny
 
   def setAssembly(self,ix,iy,assembly):
     self._assemblies[iy-1][ix-1] = assembly
+    if not assembly:
+      return
+    if self._delx[ix-1] > 0.0 and self._delx[ix-1] != assembly.getX():
+      raise ValueError
+    else:
+      self._delx[ix-1] = assembly.getX()
+    if self._dely[iy-1] > 0.0 and self._dely[iy-1] != assembly.getY():
+      raise ValueError
+    else:
+      self._dely[iy-1] = assembly.getY()
+    self._offset = [sum(self._delx)/2.0, sum(self._dely)/2.0]
 
   def getAssembly(self,ix,iy):
     return self._assemblies[iy-1][ix-1]
@@ -769,17 +790,6 @@ class coreClass:
     for (x, y) in zip([ix-1, ix, ix-1, ix], [iy-1, iy-1, iy, iy]):
       corners.append([sum(self._delx[0:x])-self._offset[0], sum(self._dely[0:y])-self._offset[1]])
     return corners
-
-  def update(self):
-    self._delx = []
-    for i in range(self._nx):
-      assembly = self.getAssembly(i+1,1)
-      self._delx.append(assembly.getX())
-    self._dely = []
-    for i in range(self._ny):
-      assembly = self.getAssembly(1,i+1)
-      self._dely.append(assembly.getY())
-    self._offset = [sum(self._delx)/2.0, sum(self._dely)/2.0]
 
   def makeJagged(self, radius):
     ystart = -self._offset[1]
@@ -1040,10 +1050,7 @@ def buildSupportLattice1():
   newPinMesh = pinmeshClass_rect.create([salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
       [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
       [1 for i in range(nsub_short)])
-  tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_short)]
-  newPin = pinClass.create(newPinMesh, mats)
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]*nsub_short)
   for iy in [1, 2, 4, 5]:
     newLattice.setPin(1,iy,newPin)
 
@@ -1051,31 +1058,22 @@ def buildSupportLattice1():
   newPinMesh = pinmeshClass_rect.create([salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
       [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
       [1 for i in range(nsub_short)])
-  tmpmats = [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_short)]
-  newPin = pinClass.create(newPinMesh, mats)
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_short)
   for iy in [1, 2, 4, 5]:
     newLattice.setPin(5,iy,newPin)
 
   # Set the W long salt/graphite rectangles
   newPinMesh = pinmeshClass_rect.create([salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
       [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)])
-  tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_long)]
-  newPin = pinClass.create(newPinMesh, mats)
+      [1 for i in range(nsub_long)])
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]*nsub_long)
   newLattice.setPin(1,3,newPin)
 
   # Set the E long salt/graphite rectangles
   newPinMesh = pinmeshClass_rect.create([salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_long)], \
+      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
       [1 for i in range(nsub_long)])
-  tmpmats = [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_long)]
-  newPin = pinClass.create(newPinMesh, mats)
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_long)
   newLattice.setPin(5,3,newPin)
 
   return newLattice
@@ -1105,10 +1103,7 @@ def buildSupportLattice2():
   newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
       [salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
       [1 for i in range(nsub_short)], [1 for i in range(nsub_short)])
-  tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_short)]
-  newPin = pinClass.create(newPinMesh, mats)
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]*nsub_short)
   for ix in [1, 2, 4, 5]:
     newLattice.setPin(ix,1,newPin)
 
@@ -1116,10 +1111,7 @@ def buildSupportLattice2():
   newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
       [salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
       [1 for i in range(nsub_short)], [1 for i in range(nsub_short)])
-  tmpmats = [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_short)]
-  newPin = pinClass.create(newPinMesh, mats)
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_short)
   for ix in [1, 2, 4, 5]:
     newLattice.setPin(ix,5,newPin)
 
@@ -1127,20 +1119,14 @@ def buildSupportLattice2():
   newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
       [salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
       [1 for i in range(nsub_long)], [1 for i in range(nsub_short)])
-  tmpmats = [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_long*nsub_short else materials['Graphite'] for i in range(nsub_long*nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_short)]
-  newPin = pinClass.create(newPinMesh, mats)
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_long*nsub_short else materials['Graphite'] for i in range(nsub_long*nsub_short)])
   newLattice.setPin(3,1,newPin)
 
   # Set the S long salt/graphite squares
   newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
       [salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
       [1 for i in range(nsub_long)], [1 for i in range(nsub_short)])
-  tmpmats = [materials['Graphite'] if (i+1)*3 <= nsub_long*nsub_short else materials['Fuel Salt'] for i in range(nsub_long*nsub_short)]
-  mats = []
-  mats = [mats + tmpmats for i in range(nsub_short)]
-  newPin = pinClass.create(newPinMesh, mats)
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_long*nsub_short else materials['Fuel Salt'] for i in range(nsub_long*nsub_short)])
   newLattice.setPin(3,5,newPin)
 
   return newLattice
@@ -1190,7 +1176,7 @@ ldebug = False
 assemblies_across_core = int(np.ceil(max(reflector_radii)/block_pitch))*2
 core = coreClass(assemblies_across_core, assemblies_across_core)
 
-# Build the basic lattices: graphite stringer, solid graphite block
+# Build the basic lattices: graphite stringer, solid graphite block, bottom support lattices,
 graphiteStringerAssembly = assemblyClass()
 graphiteStringerAssembly.addTopLattice(buildGraphiteStringer())
 
@@ -1202,8 +1188,6 @@ for iy in range(core._ny):
   for ix in range(core._nx):
     core.setAssembly(ix+1,iy+1,graphiteStringerAssembly)
 
-core.update()
-
 # Now set all the lattices outside the graphite lattice radius
 for iy in reversed(range(core._ny)):
   for ix in range(core._nx):
@@ -1211,14 +1195,6 @@ for iy in reversed(range(core._ny)):
       core.setAssembly(ix+1,iy+1,fillAssembly)
 
 core.makeJagged(reflector_radii[-1])
-
-for zone in xrange(0,len(reflector_radii)-1):
-  radius = reflector_radii[zone]
-  material = reflector_materials[zone]
-  region = reflector_names[zone]
-  core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
-
-pruneUnusedObjects(core)
 
 # Extrude the core to the full fuel height (add 15 more planes)
 core.extrudeTop(assembly_height, n_fuel_planes-1)
@@ -1250,25 +1226,17 @@ for iy in reversed(range(core._ny)):
             if assembly2._id == assembly._id:
               latticeAdded[ix2][iy2] = True
 
+for zone in xrange(0,len(reflector_radii)-1):
+  radius = reflector_radii[zone]
+  material = reflector_materials[zone]
+  region = reflector_names[zone]
+  core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
+pruneUnusedObjects(core)
+
 if not ldebug:
   core.edit()
 else:
   core.edit(False)
-
-# For assemblies with at least one corner inside the inner radius, shave them.  Do this for
-# all radii that the assemblies straddle
-# for iy in reversed(range(core._ny)):
-#   for ix in range(core._nx):
-#     if any(pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])):
-#       for zone in xrange(0,len(reflector_radii)-1):
-#         radius = reflector_radii[zone]
-#         material = reflector_materials[zone]
-#         region = reflector_names[zone]
-#         if any([not inCircle for inCircle in pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), radius)]):
-#           if zone == len(reflector_radii)-1:
-#             core.replaceMaterials(radius, materials[material])
-#           else:
-#             core.replaceMaterials(radius,materials[material], reflector_radii[zone+1])
 
 # For assemblies that did not have the bottom lattice added, extrude them downward
 # for iy in reversed(range(core._ny)):
