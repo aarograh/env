@@ -1055,7 +1055,7 @@ def buildSupportLattice1():
     newLattice.setPin(1,iy,newPin)
 
   # Set the E small salt/graphite squares
-  newPinMesh = pinmeshClass_rect.create([salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
+  newPinMesh = pinmeshClass_rect.create([cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
       [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
       [1 for i in range(nsub_short)])
   newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_short)
@@ -1070,7 +1070,7 @@ def buildSupportLattice1():
   newLattice.setPin(1,3,newPin)
 
   # Set the E long salt/graphite rectangles
-  newPinMesh = pinmeshClass_rect.create([salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
+  newPinMesh = pinmeshClass_rect.create([cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
       [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
       [1 for i in range(nsub_long)])
   newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_long)
@@ -1101,9 +1101,9 @@ def buildSupportLattice2():
 
   # Set the N small salt/graphite squares
   newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
+      [cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
       [1 for i in range(nsub_short)], [1 for i in range(nsub_short)])
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]*nsub_short)
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1) <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short*nsub_short)])
   for ix in [1, 2, 4, 5]:
     newLattice.setPin(ix,1,newPin)
 
@@ -1111,13 +1111,13 @@ def buildSupportLattice2():
   newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
       [salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
       [1 for i in range(nsub_short)], [1 for i in range(nsub_short)])
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_short)
+  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1) <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short*nsub_short)])
   for ix in [1, 2, 4, 5]:
     newLattice.setPin(ix,5,newPin)
 
   # Set the N long salt/graphite squares
   newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [salt_width] + [salt_width + (cell_length_short-salt_width)*(i+1)/(nsub_short-1) for i in range(nsub_short-1)], \
+      [cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
       [1 for i in range(nsub_long)], [1 for i in range(nsub_short)])
   newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_long*nsub_short else materials['Graphite'] for i in range(nsub_long*nsub_short)])
   newLattice.setPin(3,1,newPin)
