@@ -12,16 +12,23 @@ export MODULEPATH=/opt/modules/modulefiles:${MODULEPATH}
 module purge
 module load casl_tools/gcc-5.4.0
 
-# Modify paths
-export THERMOCHIMICA_ROOT=/projects/thermochimica
-export DATA=~/master/SCALE_test_data
-export MPACT_ADD_REPO_CLASS=Continuous
+# Add thermochimica location
+# Add corkscrew path
 export PATH=/opt/bin:$PATH
+# Add local script paths
 export PATH=~/env/scripts/postprocessing:$PATH
 export PATH=~/env/scripts/build_scripts:$PATH
 export PATH=~/env/scripts/run_scripts:$PATH
 export PATH=~/env/scripts/MCFR:$PATH
+
+# Data paths
+export DATA=~/master/SCALE_test_data
 export MPACT_DATA=~/master/VERAData/MPACT
+export THERMOCHIMICA_ROOT=/projects/thermochimica
+export THERMOCHIMICA_DATA=$THERMOCHIMICA_ROOT/data
+
+# Set MPACT repo classification so we can configure correctly
+export MPACT_ADD_REPO_CLASS=Continuous
 export MPACT_ADD_URL_REPO_BASE=repos@gad.ornl.gov:
  
 # User specific aliases and functions
