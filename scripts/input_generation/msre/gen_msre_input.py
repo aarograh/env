@@ -98,24 +98,18 @@ class pinmeshClass(geomClass):
     [pinmesh.edit() for pinmesh in pinmeshClass._list]
     print
 
-class pinmeshClass_gcyl(pinmeshClass):
+class pinmeshClass_cyl(pinmeshClass):
   _radii = []
   _submesh_r = []
   _submesh_azi = []
-  _xMin = 0.0
-  _xMax = 0.0
-  _yMin = 0.0
-  _yMax = 0.0
+  _pitch = 0.0
 
   def __init__(self,radii=None,subr=None,subazi=None,pitch=None,height=None,source=None):
     if source:
       self._radii = source._radii
       self._submesh_r = source._submesh_r
       self._submesh_azi = source._submesh_azi
-      self._xMin = source._xMin
-      self._xMax = source._xMax
-      self._yMin = source._yMin
-      self._yMax = source._yMax
+      self._pitch = source._pitch
       self._nRegions = source._nRegions
     elif radii and subr and subazi and pitch and height:
       if any([radius <= 0.0 for radius in radii]):
@@ -136,16 +130,13 @@ class pinmeshClass_gcyl(pinmeshClass):
       self._radii = radii[:]
       self._submesh_r = subr[:]
       self._submesh_azi = subazi[:]
-      self._xMin = -pitch/2.0
-      self._xMax = -self._xMin
-      self._yMin = -pitch/2.0
-      self._yMax = -self._yMin
+      self._pitch = pitch
       self._nRegions = len(self._radii)+1
-    super(pinmeshClass_gcyl, self).__init__(height=height, source=source)
+    super(pinmeshClass_cyl, self).__init__(height=height, source=source)
 
   @classmethod
   def create(cls,radii=None,subr=None,subazi=None,pitch=None,height=None,source=None):
-    newObject = pinmeshClass_gcyl(radii,subr,subazi,pitch,height,source)
+    newObject = pinmeshClass_cyl(radii,subr,subazi,pitch,height,source)
     return cls.testCreation(newObject, pinmeshClass.addObject(newObject))
 
   @classmethod
@@ -153,21 +144,20 @@ class pinmeshClass_gcyl(pinmeshClass):
     return cls(source=source)
 
   def __eq__(self, other):
-    if isinstance(other, pinmeshClass_gcyl):
+    if isinstance(other, pinmeshClass_cyl):
       if self._radii[:] == other._radii[:] and self._submesh_r[:] == other._submesh_r[:] and \
-          self._submesh_azi[:] == other._submesh_azi[:] and self._xMin == other._xMin and \
-          self._xMax == other._xMax and self._yMin == other._yMin and self._yMax == other._yMax:
-        return (True and super(pinmeshClass_gcyl, self).__eq__(other))
+          self._submesh_azi[:] == other._submesh_azi[:] and self._pitch == other._pitch:
+        return (True and super(pinmeshClass_cyl, self).__eq__(other))
       else:
         return False
     else:
       return False
 
   def getX(self):
-    return self._xMax - self._xMin
+    return self._pitch
 
   def getY(self):
-    return self._yMax - self._yMin
+    return self._pitch
 
   def getRegionCentroid(self, region):
     if region > len(self._radii):
@@ -180,11 +170,11 @@ class pinmeshClass_gcyl(pinmeshClass):
   def edit(self):
     print '  pinmesh ' + format(self._id,'2d') + ' cyl ' + \
         ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / ' + \
-        format(self.getX(),float_edit_format) + ' / ' + format(self._height,float_edit_format) + ' / ' + \
+        format(self._pitch,float_edit_format) + ' / ' + format(self._height,float_edit_format) + ' / ' + \
         ' '.join(str(subr) for subr in self._submesh_r) + ' / ' + \
         ' '.join(str(azi) for azi in self._submesh_azi) + ' / 1'
 
-class pinmeshClass_qcyl(pinmeshClass_gcyl):
+class pinmeshClass_qcyl(pinmeshClass_cyl):
   _quadrant = 0
 
   def __init__(self,radii=None,subr=None,subazi=None,pitch=None,height=None,quad=None,source=None):
@@ -217,21 +207,23 @@ class pinmeshClass_qcyl(pinmeshClass_gcyl):
     centroid = super(pinmeshClass_qcyl, self).getRegionCentroid(region)
 
     if self._quadrant == 2 or self._quadrant == 3:
-      centroid[0] = self.getX() - centroid[0]
+      centroid[0] = self._pitch - centroid[0]
     if self._quadrant == 3 or self._quadrant == 4:
-      centroid[1] = self.getY() - centroid[1]
+      centroid[1] = self._pitch - centroid[1]
 
+    if ldebug:
+      print 'centroid', region, self._id, self._quadrant, self._radii, self._pitch, centroid
     return centroid
 
   def edit(self):
     if self._quadrant == 1:
-      lengths = [0.0, self.getX(), 0.0, self.getY()]
+      lengths = [0.0, self._pitch, 0.0, self._pitch]
     elif self._quadrant == 2:
-      lengths = [-self.getX(), 0.0, 0.0, self.getY()]
+      lengths = [-self._pitch, 0.0, 0.0, self._pitch]
     elif self._quadrant == 3:
-      lengths = [-self.getX(), 0.0, -self.getY(), 0.0]
+      lengths = [-self._pitch, 0.0, -self._pitch, 0.0]
     elif self._quadrant == 4:
-      lengths = [0.0, self.getX(), -self.getY(), 0.0]
+      lengths = [0.0, self._pitch, -self._pitch, 0.0]
     print '  pinmesh ' + format(self._id,'2d') + ' gcyl ' + \
         ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / ' + \
         ' '.join(format(length,float_edit_format) for length in lengths) + ' / ' + \
@@ -1172,7 +1164,7 @@ def buildTaperedStringerLattice(height):
   local_nsub_long = nsub_short*2 + nsub_long
 
   # Approximated tapering (cylinder instead of cone)
-  newPinMesh = pinmeshClass_gcyl.create([np.sqrt(2.54*2.54/3)], [3], [1]*4, \
+  newPinMesh = pinmeshClass_cyl.create([np.sqrt(2.54*2.54/3)], [3], [1]*4, \
       local_long_length, height)
   newPin = pinClass.create(newPinMesh, [materials['Graphite'], materials['Fuel Salt']])
   newLattice.setPin(2,2,newPin)
@@ -1207,7 +1199,7 @@ def buildTaperedStringerLattice(height):
 
 def buildControlLattice(height):
   newLattice = latticeClass.create(1, 1)
-  newPinMesh = pinmeshClass_gcyl.create(control_rod_radii, control_rod_submesh, [1]*(sum(control_rod_submesh)+1), \
+  newPinMesh = pinmeshClass_cyl.create(control_rod_radii, control_rod_submesh, [1]*(sum(control_rod_submesh)+1), \
       block_pitch, height)
   newPin = pinClass.create(newPinMesh, [materials[material] for material in control_rod_materials])
   newLattice.setPin(1,1,newPin)
@@ -1221,7 +1213,7 @@ def buildDowelLattice(height):
   local_nsub_long = nsub_short*2 + nsub_long
 
   # Dowel
-  newPinMesh = pinmeshClass_gcyl.create([dowel_radius], [1], [1, 1], local_long_length, height)
+  newPinMesh = pinmeshClass_cyl.create([dowel_radius], [1], [1, 1], local_long_length, height)
   newPin = pinClass.create(newPinMesh, [materials['Graphite'], materials['Fuel Salt']])
   newLattice.setPin(2,2,newPin)
 
@@ -1256,7 +1248,7 @@ def buildDowelLattice(height):
 def buildSampleBasketLattice(height):
   newLattice = latticeClass.create(1, 1)
 
-  newPinMesh = pinmeshClass_gcyl.create(sample_basket_radius, sample_basket_submesh, [1]*(sum(sample_basket_submesh)+1), block_pitch, height)
+  newPinMesh = pinmeshClass_cyl.create(sample_basket_radius, sample_basket_submesh, [1]*(sum(sample_basket_submesh)+1), block_pitch, height)
   newPin = pinClass.create(newPinMesh, [materials['Homogenized Sample Basket'], materials['Inconel']])
   newLattice.setPin(1,1,newPin)
 
