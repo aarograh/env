@@ -3,7 +3,6 @@
 import sys
 import h5py
 import numpy as np
-import pylab as plt
 
 def assembliesAreSplit(sym, coremap):
     splitx = False
@@ -145,6 +144,7 @@ while True:
     fluxnorm = h5[stateStr + '/NODAL_XS/FLUXNORM'].value
     boron    = h5[stateStr + '/boron'].value
     ppw      = h5[stateStr + '/pin_powers'].value
+    adf      = h5[stateStr + '/NODAL_XS/ADF'].value
     cur      = h5[stateStr + '/NODAL_XS/CUR'].value
     sfx      = h5[stateStr + '/NODAL_XS/SFLX'].value
     chi      = h5[stateStr + '/NODAL_XS/CHI'].value
@@ -197,7 +197,7 @@ while True:
     print "STATE {0:4d}".format(st)
     print "-------------------------------------------------------"
     print "  k-eff: {0:7.5f}".format(keff)
-    #print "  boron: {0:6.1f} ppm".format(boron)
+    print "  boron: {0:7.2f} ppm".format(boron)
     print "  Flux Normalization: {0:12.5e}".format(fluxnorm)
     print ""
     print "Axial Power"
@@ -236,6 +236,16 @@ while True:
                     nd+1, flx[0,nd,az,asy], flx[1,nd,az,asy], xstr[0,nd,az,asy], xstr[1,nd,az,asy], xsr[0,nd,az,asy], xsr[1,nd,az,asy], xf[0,nd,az,asy], xf[1,nd,az,asy], nxf[0,nd,az,asy], nxf[1,nd,az,asy], kxf[0,nd,az,asy], kxf[1,nd,az,asy], \
                     chi[0,nd,az,asy], chi[1,nd,az,asy], xss[0,1,nd,az,asy], xss[1,0,nd,az,asy], bal[0], bal[1])
             print ""
+
+            ## ADF
+            #print "ADF"
+            #print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
+            #print "  node  1          2          1          2          1          2          1          2          1          2          1          2"
+            #for nd in xrange(4):
+            #    print "  {0:1d}    {1:10.3e} {2:10.3e} {3:10.3e} {4:10.3e} {5:10.3e} {6:10.3e} {7:10.3e} {8:10.3e} {9:10.3e} {10:10.3e} {11:10.3e} {12:10.3e}".format(\
+            #        nd+1, adf[0,0,nd,az,asy], adf[0,1,nd,az,asy], adf[1,0,nd,az,asy], adf[1,1,nd,az,asy], adf[2,0,nd,az,asy], adf[2,1,nd,az,asy], adf[3,0,nd,az,asy], \
+            #        adf[3,1,nd,az,asy], adf[4,0,nd,az,asy], adf[4,1,nd,az,asy], adf[5,0,nd,az,asy], adf[5,1,nd,az,asy])
+            #print ""
 
             # Currents
             print "Current"
