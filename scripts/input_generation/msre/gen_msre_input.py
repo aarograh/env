@@ -231,6 +231,96 @@ class pinmeshClass_qcyl(pinmeshClass_cyl):
         ' '.join(str(subr) for subr in self._submesh_r) + ' / ' + \
         ' '.join(str(subazi) for subazi in self._submesh_azi) + ' / 1'
 
+class pinmeshClass_gcyl(pinmeshClass):
+  _radii = []
+  _submesh_r = []
+  _submesh_azi = []
+  _xMin = 0.0
+  _xMax = 0.0
+  _yMin = 0.0
+  _yMax = 0.0
+
+  def __init__(self,radii=None,subr=None,subazi=None,xMin=None,xMax=None,yMin=None,yMax=None,height=None,source=None):
+    if source:
+      self._radii = source._radii
+      self._submesh_r = source._submesh_r
+      self._submesh_azi = source._submesh_azi
+      self._xMin = source._xMin
+      self._xMax = source._xMax
+      self._yMin = source._yMin
+      self._yMax = source._yMax
+      self._nRegions = source._nRegions
+    elif radii and subr and subazi and xMin and xMax and yMin and yMax and height:
+      if any([radius <= 0.0 for radius in radii]):
+        raise ValueError
+      elif sorted(radii) != radii:
+        raise ValueError
+      if len(subr) != len(radii):
+        raise ValueError
+      elif any([sub < 1 for sub in subr]):
+        raise ValueError
+      if len(subazi) != sum(subr)+1:
+        raise ValueError
+      elif any([sub < 1 for sub in subazi]):
+        raise ValueError
+      if xMax <= xMin:
+        raise ValueError
+      if yMax <= yMin:
+        raise ValueError
+
+      self._radii = radii[:]
+      self._submesh_r = subr[:]
+      self._submesh_azi = subazi[:]
+      self._xMin = xMin
+      self._xMax = xMax
+      self._yMin = yMin
+      self._yMax = yMax
+      self._nRegions = len(self._radii)+1
+    super(pinmeshClass_gcyl, self).__init__(height=height, source=source)
+
+  @classmethod
+  def create(cls,radii=None,subr=None,subazi=None,xMin=None,xMax=None,yMin=None,yMax=None,height=None,source=None):
+    newObject = pinmeshClass_cyl(radii,subr,subazi,xMin,xMax,yMin,yMax,height,source)
+    return cls.testCreation(newObject, pinmeshClass.addObject(newObject))
+
+  @classmethod
+  def clonePinMesh(cls, source):
+    return cls(source=source)
+
+  def __eq__(self, other):
+    if isinstance(other, pinmeshClass_cyl):
+      if self._radii[:] == other._radii[:] and self._submesh_r[:] == other._submesh_r[:] and \
+          self._submesh_azi[:] == other._submesh_azi[:] and self._xMin == other._xMin and \
+          self._xMax == other._xMax and self._yMin == other._yMin and self._yMax == other._yMax:
+        return (True and super(pinmeshClass_cyl, self).__eq__(other))
+      else:
+        return False
+    else:
+      return False
+
+  def getX(self):
+    return self._xMax - self._xMin
+
+  def getY(self):
+    return self._yMax - self._yMin
+
+  def getRegionCentroid(self, region):
+    # Need to implement this properly using MCFR_geomUtils as a base for calculating centroids
+    if region > len(self._radii):
+      centroid = [self._radii[-1], self._radii[-1]]
+    else:
+      centroid = [self._radii[region-1], self._radii[region-1]]
+
+    return centroid
+
+  def edit(self):
+    print '  pinmesh ' + format(self._id,'2d') + ' gcyl ' + \
+        ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / ' + \
+        ' '.join(format(value,float_edit_format) for value in [self._xMin, self._xMax, self._yMin, self._yMax]) + ' / ' + \
+        format(self._height,float_edit_format) + ' / ' + \
+        ' '.join(str(subr) for subr in self._submesh_r) + ' / ' + \
+        ' '.join(str(azi) for azi in self._submesh_azi) + ' / 1'
+
 class pinmeshClass_rect(pinmeshClass):
   _nx = 0
   _ny = 0
