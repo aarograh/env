@@ -1578,11 +1578,11 @@ for iy in range(core._ny):
 
 # Set the control rod locations
 center_assem = assemblies_across_core/2+1
-# core.setAssembly(center_assem-1,center_assem-1,ControlAssembly)
-# core.setAssembly(center_assem+1,center_assem-1,ControlAssembly)
-# core.setAssembly(center_assem-1,center_assem+1,ControlAssembly)
+core.setAssembly(center_assem-1,center_assem-1,ControlAssembly)
+core.setAssembly(center_assem+1,center_assem-1,ControlAssembly)
+core.setAssembly(center_assem-1,center_assem+1,ControlAssembly)
 # Set the sample basket location
-# core.setAssembly(center_assem+1,center_assem+1,SampleBasketAssembly)
+core.setAssembly(center_assem+1,center_assem+1,SampleBasketAssembly)
 
 # Now set all the lattices outside the graphite lattice radius
 for iy in reversed(range(core._ny)):
@@ -1596,7 +1596,7 @@ for zone in xrange(0,len(reflector_radii)-1):
   radius = reflector_radii[zone]
   material = reflector_materials[zone]
   region = reflector_names[zone]
-  # core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
+  core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
 pruneUnusedObjects(core)
 
 if not ldebug:
