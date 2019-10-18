@@ -231,7 +231,7 @@ class pinmeshClass_qcyl(pinmeshClass_cyl):
         ' '.join(str(subr) for subr in self._submesh_r) + ' / ' + \
         ' '.join(str(subazi) for subazi in self._submesh_azi) + ' / 1'
 
-class pinmeshClass_gcyl(pinmeshClass):
+class pinmeshClass_cyls(pinmeshClass):
   _radii = []
   _submesh_r = []
   _submesh_azi = []
@@ -259,7 +259,7 @@ class pinmeshClass_gcyl(pinmeshClass):
         raise ValueError
       elif any([sub < 1 for sub in subr]):
         raise ValueError
-      if len(subazi) != sum(subr)+1:
+      if len(subazi) != sum(subr):
         raise ValueError
       elif any([sub < 1 for sub in subazi]):
         raise ValueError
@@ -276,11 +276,11 @@ class pinmeshClass_gcyl(pinmeshClass):
       self._yMin = yMin
       self._yMax = yMax
       self._nRegions = len(self._radii)+1
-    super(pinmeshClass_gcyl, self).__init__(height=height, source=source)
+    super(pinmeshClass_cyls, self).__init__(height=height, source=source)
 
   @classmethod
   def create(cls,radii=None,subr=None,subazi=None,xMin=None,xMax=None,yMin=None,yMax=None,height=None,source=None):
-    newObject = pinmeshClass_cyl(radii,subr,subazi,xMin,xMax,yMin,yMax,height,source)
+    newObject = pinmeshClass_cyls(radii,subr,subazi,xMin,xMax,yMin,yMax,height,source)
     return cls.testCreation(newObject, pinmeshClass.addObject(newObject))
 
   @classmethod
@@ -288,11 +288,11 @@ class pinmeshClass_gcyl(pinmeshClass):
     return cls(source=source)
 
   def __eq__(self, other):
-    if isinstance(other, pinmeshClass_cyl):
+    if isinstance(other, pinmeshClass_cyls):
       if self._radii[:] == other._radii[:] and self._submesh_r[:] == other._submesh_r[:] and \
           self._submesh_azi[:] == other._submesh_azi[:] and self._xMin == other._xMin and \
           self._xMax == other._xMax and self._yMin == other._yMin and self._yMax == other._yMax:
-        return (True and super(pinmeshClass_cyl, self).__eq__(other))
+        return (True and super(pinmeshClass_cyls, self).__eq__(other))
       else:
         return False
     else:
@@ -314,12 +314,20 @@ class pinmeshClass_gcyl(pinmeshClass):
     return centroid
 
   def edit(self):
-    print '  pinmesh ' + format(self._id,'2d') + ' gcyl ' + \
-        ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / ' + \
+    # print '  pinmesh ' + format(self._id,'2d') + ' gcyl ' + \
+    #     ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / ' + \
+    #     ' '.join(format(value,float_edit_format) for value in [self._xMin, self._xMax, self._yMin, self._yMax]) + ' / ' + \
+    #     format(self._height,float_edit_format) + ' / ' + \
+    #     ' '.join(str(subr) for subr in self._submesh_r) + ' / ' + \
+    #     ' '.join(str(azi) for azi in self._submesh_azi) + ' / 1'
+    print ' pinmesh ' + format(self._id,'2d') + ' cyls  / ' + \
         ' '.join(format(value,float_edit_format) for value in [self._xMin, self._xMax, self._yMin, self._yMax]) + ' / ' + \
-        format(self._height,float_edit_format) + ' / ' + \
-        ' '.join(str(subr) for subr in self._submesh_r) + ' / ' + \
-        ' '.join(str(azi) for azi in self._submesh_azi) + ' / 1'
+        format(self._height,float_edit_format) + ' / 1 / ' + \
+        ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / 0.000000 0.000000 / ' + \
+        ' '.join(format(subr,'2d') for subr in self._submesh_r) + ' / ' + \
+        ' '.join(format(azi,'2d') for azi in self._submesh_azi)
+        # This goes right after the ID and "cyls", but is causing bugs in MPACT
+        # ' '.join(format(value) for value in visit_cyls_cells) + ' / ' + \
 
 class pinmeshClass_rect(pinmeshClass):
   _nx = 0
@@ -1073,6 +1081,80 @@ def buildGraphiteBlockCenter(height, material=None):
 
   return newLattice
 
+def fillLatticeOutsideLayer(height,material):
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+
+  # Useful values
+  cell_length_long = channel_length - 2*channel_radius
+  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
+  nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
+  nsub_long = 2*nsub_short
+
+  # Set the small graphite square pins
+  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
+      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
+      [1 for i in range(nsub_short)],height)
+  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_short*nsub_short)])
+  for (ix, iy) in zip([1, 2, 4, 5, 1, 5, 1, 5, 1, 2, 4, 5], [1, 1, 1, 1, 2, 2, 4, 4, 5, 5, 5, 5]):
+    newLattice.setPin(ix,iy,newPin)
+
+  # Set the N/S rectangular graphite pieces
+  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
+      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_long)], \
+      [1 for i in range(nsub_short)],height)
+  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_long*nsub_short)])
+  newLattice.setPin(3,1,newPin)
+  newLattice.setPin(3,5,newPin)
+
+  # Set the E/W rectangular graphite pieces
+  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
+      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
+      [1 for i in range(nsub_long)],height)
+  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_short*nsub_long)])
+  newLattice.setPin(1,3,newPin)
+  newLattice.setPin(5,3,newPin)
+
+  return newLattice
+
+def buildGcylCenter3x3(height,radii,subr,subazi,materials):
+  newLattice = fillLatticeOutsideLayer(height,materials[-1])
+
+  # Useful values
+  cell_length_long = channel_length - 2*channel_radius
+  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
+
+  xvals = [-cell_length_long/2.0 - cell_length_short, -cell_length_long/2.0, \
+      cell_length_long/2.0, cell_length_long/2.0 + cell_length_short]
+  yvals = [val for val in reversed(xvals)]
+  for ix in range(3):
+    for iy in range(3):
+      newPinMesh = pinmeshClass_cyls.create(radii=radii,subr=subr,subazi=subazi,xMin=xvals[ix],xMax=xvals[ix+1], \
+          yMin=yvals[iy+1],yMax=yvals[iy],height=height)
+      newPin = pinClass.create(newPinMesh, materials)
+      newLattice.setPin(ix+2,iy+2,newPin)
+
+  return newLattice
+
+def buildGcylCenter5x5(height,radii,subr,subazi,materials):
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+
+  # Useful values
+  cell_length_long = channel_length - 2*channel_radius
+  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
+
+  xvals = [-cell_length_long/2.0 - 2.0*cell_length_short, -cell_length_long/2.0 - cell_length_short, \
+      -cell_length_long/2.0, cell_length_long/2.0, cell_length_long/2.0 + cell_length_short, \
+      cell_length_long/2.0 + 2.0*cell_length_short]
+  yvals = [val for val in reversed(xvals)]
+  for ix in range(5):
+    for iy in range(5):
+      newPinMesh = pinmeshClass_cyls.create(radii=radii,subr=subr,subazi=subazi,xMin=xvals[ix],xMax=xvals[ix+1], \
+          yMin=yvals[iy+1],yMax=yvals[iy],height=height)
+      newPin = pinClass.create(newPinMesh, materials)
+      newLattice.setPin(ix+1,iy+1,newPin)
+
+  return newLattice
+
 def buildGraphiteStringerLattice(height):
   newLattice = buildGraphiteBlockCenter(height)
 
@@ -1248,99 +1330,25 @@ def buildSupportLattice2(height):
   return newLattice.addObject(newLattice)
 
 def buildTaperedStringerLattice(height):
-  newLattice = latticeClass.create(3, 3)
-
-  local_long_length = cell_length_short*2.0 + cell_length_long
-  local_nsub_long = nsub_short*2 + nsub_long
-
-  # Approximated tapering (cylinder instead of cone)
-  newPinMesh = pinmeshClass_cyl.create([np.sqrt(2.54*2.54/3)], [3], [1]*4, \
-      local_long_length, height)
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'], materials['Fuel Salt']])
-  newLattice.setPin(2,2,newPin)
-
-  # Corners
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] for i in range(nsub_short*nsub_short)])
-  newLattice.setPin(1,1,newPin)
-  newLattice.setPin(1,3,newPin)
-  newLattice.setPin(3,1,newPin)
-  newLattice.setPin(3,3,newPin)
-
-  # Top/Bottom
-  newPinMesh = pinmeshClass_rect.create([local_long_length*(i+1)/local_nsub_long for i in range(local_nsub_long)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(local_nsub_long)], \
-      [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] for i in range(local_nsub_long*nsub_short)])
-  newLattice.setPin(2,1,newPin)
-  newLattice.setPin(2,3,newPin)
-
-  # East/West
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [local_long_length*(i+1)/local_nsub_long for i in range(local_nsub_long)], \
-      [1 for i in range(nsub_short)], [1 for i in range(local_nsub_long)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] for i in range(nsub_short*local_nsub_long)])
-  newLattice.setPin(1,2,newPin)
-  newLattice.setPin(3,2,newPin)
+  newLattice = buildGcylCenter3x3(height,[np.sqrt(2.54*2.54/3)],[1],[1], \
+      [materials['Graphite'], materials['Fuel Salt']])
 
   return newLattice.addObject(newLattice)
 
 def buildControlLattice(height):
-  newLattice = latticeClass.create(1, 1)
-  newPinMesh = pinmeshClass_cyl.create(control_rod_radii, control_rod_submesh, [1]*(sum(control_rod_submesh)+1), \
-      block_pitch, height)
-  newPin = pinClass.create(newPinMesh, [materials[material] for material in control_rod_materials])
-  newLattice.setPin(1,1,newPin)
+  newLattice = buildGcylCenter5x5(height,control_rod_radii, control_rod_submesh, [1]*(sum(control_rod_submesh)), \
+      [materials[material] for material in control_rod_materials])
 
   return newLattice.addObject(newLattice)
 
 def buildDowelLattice(height):
-  newLattice = latticeClass.create(3, 3)
-
-  local_long_length = cell_length_short*2.0 + cell_length_long
-  local_nsub_long = nsub_short*2 + nsub_long
-
-  # Dowel
-  newPinMesh = pinmeshClass_cyl.create([dowel_radius], [1], [1, 1], local_long_length, height)
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'], materials['Fuel Salt']])
-  newLattice.setPin(2,2,newPin)
-
-  # Corners
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] for i in range(nsub_short*nsub_short)])
-  newLattice.setPin(1,1,newPin)
-  newLattice.setPin(1,3,newPin)
-  newLattice.setPin(3,1,newPin)
-  newLattice.setPin(3,3,newPin)
-
-  # Top/Bottom
-  newPinMesh = pinmeshClass_rect.create([local_long_length*(i+1)/local_nsub_long for i in range(local_nsub_long)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(local_nsub_long)], \
-      [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] for i in range(local_nsub_long*nsub_short)])
-  newLattice.setPin(2,1,newPin)
-  newLattice.setPin(2,3,newPin)
-
-  # East/West
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [local_long_length*(i+1)/local_nsub_long for i in range(local_nsub_long)], \
-      [1 for i in range(nsub_short)], [1 for i in range(local_nsub_long)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] for i in range(nsub_short*local_nsub_long)])
-  newLattice.setPin(1,2,newPin)
-  newLattice.setPin(3,2,newPin)
+  newLattice = buildGcylCenter3x3(height, [dowel_radius], [1], [1], [materials['Graphite'], materials['Fuel Salt']])
 
   return newLattice.addObject(newLattice)
 
 def buildSampleBasketLattice(height):
-  newLattice = latticeClass.create(1, 1)
-
-  newPinMesh = pinmeshClass_cyl.create(sample_basket_radius, sample_basket_submesh, [1]*(sum(sample_basket_submesh)+1), block_pitch, height)
-  newPin = pinClass.create(newPinMesh, [materials['Homogenized Sample Basket'], materials['Inconel']])
-  newLattice.setPin(1,1,newPin)
+  newLattice = buildGcylCenter5x5(height, sample_basket_radius, sample_basket_submesh, [1]*(sum(sample_basket_submesh)), \
+      [materials['Homogenized Sample Basket'], materials['Inconel']])
 
   return newLattice.addObject(newLattice)
 
@@ -1520,6 +1528,7 @@ reflector_names = ['Graphite Core', 'Core Can Inner Radius', 'Core Can Outer Rad
 
 # Edit controls
 float_edit_format = '9.6f'
+visit_cyls_cells = [10, 10]
 
 # Fuel block parameters
 block_pitch = 5.08 #5.07492
@@ -1533,11 +1542,11 @@ dowel_radius = 2.54/2.0
 # Sample Basket parameters
 # sample_basket_radius = [2.605, 2.685]
 sample_basket_radius = [2.539] #approximated due to MPACT standard input limitations
-sample_basket_submesh = [5]
+sample_basket_submesh = [1]
 
 # Control parameters
 control_rod_radii = [0.2245, 0.79375, 0.9525, 1.0033, 1.0541, 1.0668, 1.3716, 1.397, 1.4478, 2.3749, 2.539] #approximated down from 2.54
-control_rod_submesh = [1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1]
+control_rod_submesh = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 control_rod_materials = ['Inconel', 'Cell Gas', 'Stainlesss Steel', 'Cell Gas', 'Inconel', 'Helium Gas', \
     'Control Rod Poison', 'Helium Gas', 'Inconel', 'Cell Gas', 'Inconel', 'Fuel Salt']
 
@@ -1596,7 +1605,7 @@ for zone in xrange(0,len(reflector_radii)-1):
   radius = reflector_radii[zone]
   material = reflector_materials[zone]
   region = reflector_names[zone]
-  core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
+  # core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
 pruneUnusedObjects(core)
 
 if not ldebug:
