@@ -30,10 +30,14 @@ Host github
 Hostname github.com
 ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
 
-Host cades
+Host panacea
 Hostname mod-condo-login
 User ag6
 
 Host inspect
 Hostname inspect.ornl.gov
 User i45705
+
+Host ross
+Hostname ross-login
+User ag6

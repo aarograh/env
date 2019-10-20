@@ -3,7 +3,6 @@
 import sys
 import h5py
 import numpy as np
-import pylab as plt
 
 def assembliesAreSplit(sym, coremap):
     splitx = False
@@ -143,7 +142,9 @@ while True:
     # Read all the state data
     keff     = h5[stateStr + '/keff'].value
     fluxnorm = h5[stateStr + '/NODAL_XS/FLUXNORM'].value
+    boron    = h5[stateStr + '/boron'].value
     ppw      = h5[stateStr + '/pin_powers'].value
+    adf      = h5[stateStr + '/NODAL_XS/ADF'].value
     cur      = h5[stateStr + '/NODAL_XS/CUR'].value
     sfx      = h5[stateStr + '/NODAL_XS/SFLX'].value
     chi      = h5[stateStr + '/NODAL_XS/CHI'].value
@@ -163,8 +164,8 @@ while True:
     fufrv    = h5[stateStr + '/NODAL_XS/FUELVOLFRAC'].value
     dfiv     = h5[stateStr + '/NODAL_XS/I135ND'].value # 1/barn-cm
     dpmv     = h5[stateStr + '/NODAL_XS/PM149ND'].value # 1/barn-cm
-    dxev     = h5[stateStr + '/NODAL_XS/SM149ND'].value # 1/barn-cm
-    dsmv     = h5[stateStr + '/NODAL_XS/XE135ND'].value # 1/barn-cm
+    dsmv     = h5[stateStr + '/NODAL_XS/SM149ND'].value # 1/barn-cm
+    dxev     = h5[stateStr + '/NODAL_XS/XE135ND'].value # 1/barn-cm
     xxeabv   = h5[stateStr + '/NODAL_XS/XE135XSAB'].value # barns
     xsmabv   = h5[stateStr + '/NODAL_XS/SM149XSAB'].value # barns
     xhidmiv  = h5[stateStr + '/NODAL_XS/CHID'].value
@@ -196,6 +197,7 @@ while True:
     print "STATE {0:4d}".format(st)
     print "-------------------------------------------------------"
     print "  k-eff: {0:7.5f}".format(keff)
+    print "  boron: {0:7.2f} ppm".format(boron)
     print "  Flux Normalization: {0:12.5e}".format(fluxnorm)
     print ""
     print "Axial Power"
@@ -235,12 +237,22 @@ while True:
                     chi[0,nd,az,asy], chi[1,nd,az,asy], xss[0,1,nd,az,asy], xss[1,0,nd,az,asy], bal[0], bal[1])
             print ""
 
+            ## ADF
+            #print "ADF"
+            #print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
+            #print "  node  1          2          1          2          1          2          1          2          1          2          1          2"
+            #for nd in xrange(4):
+            #    print "  {0:1d}    {1:10.3e} {2:10.3e} {3:10.3e} {4:10.3e} {5:10.3e} {6:10.3e} {7:10.3e} {8:10.3e} {9:10.3e} {10:10.3e} {11:10.3e} {12:10.3e}".format(\
+            #        nd+1, adf[0,0,nd,az,asy], adf[0,1,nd,az,asy], adf[1,0,nd,az,asy], adf[1,1,nd,az,asy], adf[2,0,nd,az,asy], adf[2,1,nd,az,asy], adf[3,0,nd,az,asy], \
+            #        adf[3,1,nd,az,asy], adf[4,0,nd,az,asy], adf[4,1,nd,az,asy], adf[5,0,nd,az,asy], adf[5,1,nd,az,asy])
+            #print ""
+
             # Currents
             print "Current"
             print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
             print "  node  1          2          1          2          1          2          1          2          1          2          1          2"
             for nd in xrange(4):
-                print "  {0:1d}    {1:10.3e} {2:10.3e} {3:10.3e} {4:10.3e} {5:10.3e} {6:10.3e} {7:10.3e} {8:10.3e} {9:10.3e} {10:10.3e} {9:11.3e} {12:10.3e}".format(\
+                print "  {0:1d}    {1:10.3e} {2:10.3e} {3:10.3e} {4:10.3e} {5:10.3e} {6:10.3e} {7:10.3e} {8:10.3e} {9:10.3e} {10:10.3e} {11:10.3e} {12:10.3e}".format(\
                     nd+1, cur[0,0,nd,az,asy], cur[0,1,nd,az,asy], cur[1,0,nd,az,asy], cur[1,1,nd,az,asy], cur[2,0,nd,az,asy], cur[2,1,nd,az,asy], cur[3,0,nd,az,asy], \
                     cur[3,1,nd,az,asy], cur[4,0,nd,az,asy], cur[4,1,nd,az,asy], cur[5,0,nd,az,asy], cur[5,1,nd,az,asy])
             print ""
@@ -250,7 +262,7 @@ while True:
             print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
             print "  node  1          2          1          2          1          2          1          2          1          2          1          2"
             for nd in xrange(4):
-                print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e} {9:10.4e} {10:10.4e} {9:11.4e} {12:10.4e}".format(\
+                print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e} {9:10.4e} {10:10.4e} {11:10.4e} {12:10.4e}".format(\
                     nd+1, sfx[0,0,nd,az,asy], sfx[0,1,nd,az,asy], sfx[1,0,nd,az,asy], sfx[1,1,nd,az,asy], sfx[2,0,nd,az,asy], sfx[2,1,nd,az,asy], sfx[3,0,nd,az,asy], \
                     sfx[3,1,nd,az,asy], sfx[4,0,nd,az,asy], sfx[4,1,nd,az,asy], sfx[5,0,nd,az,asy], sfx[5,1,nd,az,asy])
             print ""
@@ -259,14 +271,7 @@ while True:
             if powasy >= 0 and az >= fuelstartz-1 and az <= fuelstopz-1:
                 print "Pin Powers"
                 for i in xrange(ppw.shape[0]):
-                    print '      ' + ' '.join('%6.4f' % ppw[i,j,az-fuelstartz,powasy] for j in xrange(ppw.shape[1]))
-                print ""
-
-            # Radial power distribution
-            if powasy >= 0 and az == 0:
-                print "Radial Power"
-                for i in xrange(radpow.shape[0]):
-                    print '      ' + ' '.join('%6.4f' % radpow[i,j,powasy] for j in xrange(radpow.shape[1]))
+                    print '      ' + ' '.join('%6.4f' % ppw[i,j,az-fuelstartz+1,powasy] for j in xrange(ppw.shape[1]))
                 print ""
 
             # TH Data
@@ -312,4 +317,15 @@ while True:
             print "  node  BURNUP     IFRACTV"
             for nd in xrange(4):
                 print "  {0:1d}     {1:10.4e} {2:10.4e}".format(nd+1, burnup[nd,az,asy], ifractv[nd,az,asy])
+            print ""
+
+    print "Radial Powers"
+    for asy in xrange(nasy):
+        powasy = asy2powasy(asy+1) -1
+
+        # Print assembly header
+        if powasy >= 0:
+            print "    ASSEMBLY {0:4d}".format(asy+1)
+            for i in xrange(radpow.shape[0]):
+                print '      ' + ' '.join('%6.4f' % radpow[i,j,powasy] for j in xrange(radpow.shape[1]))
             print ""
