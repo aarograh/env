@@ -536,6 +536,27 @@ class pinClass(geomClass):
         print 'Adding new pin'
       return pinClass.addObject(clone)
 
+  def addRings(self, radii, ring_materials, origin):
+    corners = self.getCorners(origin)
+    pin_radii = []
+    pin_mats = []
+    for (radius, material) in zip(radii, ring_materials):
+      inCircle = pointsInCircle(corners, radius)
+      if any(test for test in inCircle) and not all(test for test in inCircle):
+        pin_radii.append(radius)
+        pin_mats.append(materials[material])
+
+    pin_mats.insert(0, self._materials[0])
+    newPinMesh = pinmeshClass_cyls.create(pin_radii, [1]*len(pin_radii), [1]*len(pin_radii), \
+        origin[0], origin[0]+self.getX(), origin[1], origin[1]+self.getY(), self._height)
+    newPin = pinClass.create(newPinMesh, pin_mats)
+
+    if newPin == self:
+      del newPin
+      return self
+    else:
+      return pinClass.addObject(newPin)
+
   def extrude(self, height):
     if self._height == height:
       return self
@@ -691,6 +712,28 @@ class latticeClass(geomClass):
         xstart += self._delx[ix]
         if ldebug:
           print
+
+    if clone == self:
+      del clone
+      return self
+    else:
+      return latticeClass.addObject(clone)
+
+  def addRings(self, radii, ring_materials, origin):
+    clone = latticeClass(source=self)
+    ystart = origin[1] + self.getY()
+    for iy in reversed(range(self._ny)):
+      ystart -= self._dely[iy]
+      xstart = origin[0]
+      for ix in range(self._nx):
+        pin = self.getPin(ix+1,self._ny-iy)
+        corners = pin.getCorners([xstart, ystart])
+        if not any(pointsInCircle(corners, radii[-1])) or all(pointsInCircle(corners, radii[0])):
+          newpin = pin
+        else:
+          newpin = pin.addRings(radii, ring_materials, [xstart, ystart])
+        clone.setPin(ix+1,self._ny-iy,newpin)
+        xstart += self._delx[ix]
 
     if clone == self:
       del clone
@@ -869,9 +912,27 @@ class assemblyClass(geomClass):
         newlattice = lattice.replaceMaterials(radius, material, origin, outerRadius)
         if ldebug:
           print iz, newlattice
+        print iz, self._id, clone._id, lattice._id, newlattice._id
         clone.setLattice(iz+1,newlattice)
     if ldebug:
       print
+
+    if clone == self:
+      del clone
+      return self
+    else:
+      return assemblyClass.addAssembly(clone)
+
+  def addRings(self, radii, materials, origin):
+    clone = assemblyClass(source=self)
+    for iz in range(self._nz):
+      lattice = self.getLattice(iz+1)
+      if iz > 0:
+        if lattice is self.getLattice(iz):
+          clone.setLattice(iz+1,clone.getLattice(iz))
+          continue
+        newlattice = lattice.addRings(radii, materials, origin)
+        clone.setLattice(iz+1,newlattice)
 
     if clone == self:
       del clone
@@ -1388,10 +1449,6 @@ fillAssembly = buildFillAssembly()
 # Set all core lattices to the graphite stringer
 for iy in range(core._ny):
   for ix in range(core._nx):
-    # TODO: Should be checking assemblies againt radii:
-    # if completely inside innermost: set graphite stringer
-    # elif completely outside innermost: setup assembly based on radius
-    # else: intersect the graphite stringer assembly
     core.setAssembly(ix+1,iy+1,graphiteStringerAssembly_Standard)
 
 # Set the control rod locations
@@ -1399,22 +1456,34 @@ center_assem = assemblies_across_core/2+1
 core.setAssembly(center_assem-1,center_assem-1,ControlAssembly)
 core.setAssembly(center_assem+1,center_assem-1,ControlAssembly)
 core.setAssembly(center_assem-1,center_assem+1,ControlAssembly)
-# # Set the sample basket location
+# Set the sample basket location
 core.setAssembly(center_assem+1,center_assem+1,SampleBasketAssembly)
+
+# Make the core jagged
+core.makeJagged(reflector_radii[-1])
 
 # Now set all the lattices outside the graphite lattice radius
 for iy in reversed(range(core._ny)):
   for ix in range(core._nx):
-    if all([not inCircle for inCircle in pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])]):
-      core.setAssembly(ix+1,iy+1,fillAssembly)
-
-core.makeJagged(reflector_radii[-1])
-
-for zone in xrange(0,len(reflector_radii)-1):
-  radius = reflector_radii[zone]
-  material = reflector_materials[zone]
-  region = reflector_names[zone]
-  core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
+    assembly = core.getAssembly(ix+1,iy+1)
+    if assembly:
+      inCircle = pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])
+      if all(test for test in inCircle):
+        pass
+      elif any(test for test in inCircle):
+        for zone in xrange(0,len(reflector_radii)-1):
+          tmpassembly = core.getAssembly(ix+1,iy+1)
+          radius = reflector_radii[zone]
+          material = reflector_materials[zone]
+          region = reflector_names[zone]
+          core.setAssembly(ix+1,iy+1,tmpassembly.replaceMaterials(radius, materials[material], core.getAssemblyCorners(ix+1,iy+1)[0], reflector_radii[zone+1]))
+      else:
+        core.setAssembly(ix+1,iy+1,fillAssembly.addRings(reflector_radii, reflector_materials, core.getAssemblyCorners(ix+1,iy+1)[0]))
+#for zone in xrange(0,len(reflector_radii)-1):
+#  radius = reflector_radii[zone]
+#  material = reflector_materials[zone]
+#  region = reflector_names[zone]
+#  core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
 pruneUnusedObjects(core)
 
 if not ldebug:
