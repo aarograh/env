@@ -1,0 +1,10 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =8
+let g:netrw_dirhist_1='/home/ag6/master/MPACT/MPACT_exe/tests/validation_tests/vera/benchmark4'
+let g:netrw_dirhist_2='/home/ag6/master/MPACT/MPACT_exe/tests/validation_tests/vera/benchmark4/2D'
+let g:netrw_dirhist_3='/home/ag6/master/MPACT/MPACT_exe/tests/validation_tests'
+let g:netrw_dirhist_4='/home/ag6/master/MPACT/MPACT_exe/tests/validation_tests/vera'
+let g:netrw_dirhist_5='/home/ag6/master/MPACT/MPACT_exe/tests/validation_tests/vera/benchmark4'
+let g:netrw_dirhist_6='/home/ag6/master/MPACT/MPACT_exe/tests/validation_tests/vera/benchmark4/2D'
+let g:netrw_dirhist_7='/home/ag6/thesis/gnu_release_petsc/MPACT_exe/src/p3_30_trilinos'
+let g:netrw_dirhist_8='/home/ag6/thesis/gnu_release_petsc/MPACT_exe/src'
