@@ -211,8 +211,6 @@ class pinmeshClass_qcyl(pinmeshClass_cyl):
     if self._quadrant == 3 or self._quadrant == 4:
       centroid[1] = self._pitch - centroid[1]
 
-    if ldebug:
-      print 'centroid', region, self._id, self._quadrant, self._radii, self._pitch, centroid
     return centroid
 
   def edit(self):
@@ -313,21 +311,105 @@ class pinmeshClass_cyls(pinmeshClass):
 
     return centroid
 
+  def getRegionIndex(self, location):
+    index = 0
+    for iradius in range(len(self._radii)):
+      radius = self._radii[iradius]
+      if location[0]*location[0] + location[1]*location[1] <= radius*radius and \
+          location[0] >= self._xMin and location[0] <= self._xMax and \
+          location[1] >= self._yMin and location[1] <= self._yMax:
+        index = iradius + 1
+        break
+    return index
+
   def edit(self):
-    # print '  pinmesh ' + format(self._id,'2d') + ' gcyl ' + \
-    #     ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / ' + \
-    #     ' '.join(format(value,float_edit_format) for value in [self._xMin, self._xMax, self._yMin, self._yMax]) + ' / ' + \
-    #     format(self._height,float_edit_format) + ' / ' + \
-    #     ' '.join(str(subr) for subr in self._submesh_r) + ' / ' + \
-    #     ' '.join(str(azi) for azi in self._submesh_azi) + ' / 1'
-    print ' pinmesh ' + format(self._id,'2d') + ' cyls  / ' + \
+    print '  pinmesh ' + format(self._id,'2d') + ' cyls ' + ' '.join(str(value) for value in visit_cyls_cells) + ' / ' + \
         ' '.join(format(value,float_edit_format) for value in [self._xMin, self._xMax, self._yMin, self._yMax]) + ' / ' + \
         format(self._height,float_edit_format) + ' / 1 / ' + \
         ' '.join(format(radius,float_edit_format) for radius in self._radii) + ' / 0.000000 0.000000 / ' + \
         ' '.join(format(subr,'2d') for subr in self._submesh_r) + ' / ' + \
         ' '.join(format(azi,'2d') for azi in self._submesh_azi)
-        # This goes right after the ID and "cyls", but is causing bugs in MPACT
-        # ' '.join(format(value) for value in visit_cyls_cells) + ' / ' + \
+
+class pinmeshClass_msre(pinmeshClass):
+
+  def __init__(self,height=None,source=None):
+    self._nRegions = 6
+    super(pinmeshClass_msre, self).__init__(height=height,source=source)
+
+  @classmethod
+  def create(cls,height=None,source=None):
+    newObject = pinmeshClass_msre(height,source)
+    return cls.testCreation(newObject, pinmeshClass.addObject(newObject))
+
+  @classmethod
+  def clonePinMesh(cls, source):
+    return cls(source=source)
+
+  def __eq__(self,other):
+    if isinstance(other, pinmeshClass_msre):
+      return super(pinmeshClass_msre, self).__eq__(other)
+    else:
+      return False
+
+  def getX(self):
+    return block_pitch
+
+  def getY(self):
+    return block_pitch
+
+  def getRegionCentroid(self, region):
+    #TODO: make this general
+    # Ordering is background, center ring, north, west, south east
+    if region == 1 or region == 2:
+      centroid = [block_pitch/2.0]*2
+    elif region == 3:
+      centroid = [block_pitch/2.0, block_pitch-channel_radius/2.0]
+    elif region == 4:
+      centroid = [channel_radius/2.0, block_pitch/2.0]
+    elif region == 5:
+      centroid = [block_pitch/2.0, channel_radius/2.0]
+    elif region == 6:
+      centroid = [block_pitch-channel_radius/2.0, block_pitch/2.0]
+
+    return centroid
+
+  def getRegionIndex(self, location):
+    distance_to_channel = (block_pitch - channel_length)/2.0
+    index = -1
+    if location[0] > channel_radius and location[0] < block_pitch-channel_radius and \
+        location[1] > channel_radius and location[1] < block_pitch-channel_radius:
+      if location[0]*location[0] + location[1]*location[1] <= 1.0:
+        index = 1
+      else:
+        index = 0
+    elif location[1] >= block_pitch-channel_radius:
+      if location[0] < distance_to_channel or location[0] > block_pitch-distance_to_channel:
+        index = 0
+      else:
+        index = 2
+    elif location[0] < channel_radius:
+      if location[1] < distance_to_channel or location[1] > block_pitch-distance_to_channel:
+        index = 0
+      else:
+        index = 3
+    elif location[1] < channel_radius:
+      if location[0] < distance_to_channel or location[0] > block_pitch-distance_to_channel:
+        index = 0
+      else:
+        index = 4
+    else:
+      if location[1] < distance_to_channel or location[1] > block_pitch-distance_to_channel:
+        index = 0
+      else:
+        index = 5
+
+    return index-1
+
+  def edit(self):
+    print '  pinmesh ' + format(self._id,'2d') + ' msre ' + ' '.join(str(value) for value in visit_cyls_cells) + ' / 3.60 / ' + format(block_pitch,float_edit_format) + ' / ' + \
+        format(self._height,float_edit_format) + ' / 5 / 8 8 8 16 16 16 / 1 / ' + \
+        format(channel_radius,float_edit_format) + ' / ' + format(flat_length,float_edit_format) + \
+        ' / 2 / 4 4 / 6 6'
 
 class pinmeshClass_rect(pinmeshClass):
   _nx = 0
@@ -479,24 +561,63 @@ class pinClass(geomClass):
 
   def replaceMaterials(self, radius, material, origin, outerRadius=10000000000.0):
     clone = pinClass(source=self)
-    for region in range(self._pinmesh._nRegions):
-      centroid = self._pinmesh.getRegionCentroid(region+1)
-      centroid[0] += origin[0]
-      centroid[1] += origin[1]
-      if ldebug:
-        print 'pin:', region, origin, centroid, ':', radius, outerRadius, pointsInCircle([centroid], outerRadius), pointsInCircle([centroid], radius)
-      if pointsInCircle([centroid], outerRadius)[0] and not pointsInCircle([centroid], radius)[0]:
-        if ldebug:
-          print 'Changing region material from ', clone._materials[region], ' to ', material
-        clone._materials[region] = copy.deepcopy(material)
+    if isinstance(clone._pinmesh, pinmeshClass_msre) or isinstance(clone._pinmesh, pinmeshClass_cyls):
+      xmesh = [self._pinmesh.getX()*(i+1)/10 for i in range(10)]
+      ymesh = [self._pinmesh.getY()*(i+1)/10 for i in range(10)]
+      clone._pinmesh = pinmeshClass_rect.create(xmesh, ymesh, [1]*10, [1]*10, self._pinmesh._height)
+      clone._materials = []
+      for region in range(clone._pinmesh._nRegions):
+        centroid = clone._pinmesh.getRegionCentroid(region+1)
+        shifted_centroid = [centroid[0] + origin[0], centroid[1] + origin[1]]
+        inCircle1 = pointsInCircle([shifted_centroid], radius)
+        inCircle2 = pointsInCircle([shifted_centroid], outerRadius)
+        if inCircle2[0] and not inCircle1[0]:
+          clone._materials.append(material)
+        else:
+          index = self._pinmesh.getRegionIndex(centroid)
+          clone._materials.append(self._materials[index])
+    else:
+      for region in range(self._pinmesh._nRegions):
+        centroid = self._pinmesh.getRegionCentroid(region+1)
+        centroid[0] += origin[0]
+        centroid[1] += origin[1]
+        if pointsInCircle([centroid], outerRadius)[0] and not pointsInCircle([centroid], radius)[0]:
+          clone._materials[region] = copy.deepcopy(material)
 
     if clone == self:
       del clone
       return self
     else:
-      if ldebug:
-        print 'Adding new pin'
       return pinClass.addObject(clone)
+
+  def addRings(self, radii, ring_materials, fill_material, origin):
+    corners = self.getCorners(origin)
+    pin_radii = []
+    pin_mats = []
+    for zone in range(len(radii)-1):
+      inCircle1 = pointsInCircle(corners, radii[zone])
+      inCircle2 = pointsInCircle(corners, radii[zone+1])
+      if zone == 0:
+        if any(inCircle1):
+          pin_radii.append(radii[zone])
+          pin_mats.append(materials[fill_material])
+      if not all(inCircle1) and any(inCircle2):
+        pin_radii.append(radii[zone+1])
+        pin_mats.append(materials[ring_materials[zone]])
+
+    # If any points are outside the last radius, then insert the fill material
+    if not any(test for test in inCircle):
+      pin_mats.insert(0, materials[fill_material])
+
+    newPinMesh = pinmeshClass_cyls.create(pin_radii, [1]*len(pin_radii), [1]*len(pin_radii), \
+        origin[0], origin[0]+self.getX(), origin[1], origin[1]+self.getY(), self._height)
+    newPin = pinClass.create(newPinMesh, pin_mats)
+
+    if newPin == self:
+      del newPin
+      return self
+    else:
+      return pinClass.addObject(newPin)
 
   def extrude(self, height):
     if self._height == height:
@@ -641,18 +762,36 @@ class latticeClass(geomClass):
       for ix in range(self._nx):
         pin = self.getPin(ix+1,self._ny-iy)
         corners = pin.getCorners([xstart, ystart])
-        if ldebug:
-          if origin[1] > 71.0:
-            print 'lattice:', iy, ix, ystart, xstart, ':', radius, outerRadius, ':', \
-                pointsInCircle(corners, outerRadius), ':', pointsInCircle(corners, radius), ':', corners
-        if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
+        test1 = any(pointsInCircle(corners, outerRadius))
+        test2 = all(pointsInCircle(corners, radius))
+        if not test1 or test2:
           newpin = pin
         else:
           newpin = pin.replaceMaterials(radius, material, [xstart, ystart], outerRadius)
         clone.setPin(ix+1,self._ny-iy,newpin)
         xstart += self._delx[ix]
-        if ldebug:
-          print
+
+    if clone == self:
+      del clone
+      return self
+    else:
+      return latticeClass.addObject(clone)
+
+  def addRings(self, radii, ring_materials, fill_material, origin):
+    clone = latticeClass(source=self)
+    ystart = origin[1] + self.getY()
+    for iy in reversed(range(self._ny)):
+      ystart -= self._dely[iy]
+      xstart = origin[0]
+      for ix in range(self._nx):
+        pin = self.getPin(ix+1,self._ny-iy)
+        corners = pin.getCorners([xstart, ystart])
+        if not any(pointsInCircle(corners, radii[-1])) or all(pointsInCircle(corners, radii[0])):
+          newpin = pin
+        else:
+          newpin = pin.addRings(radii, ring_materials, fill_material, [xstart, ystart])
+        clone.setPin(ix+1,self._ny-iy,newpin)
+        xstart += self._delx[ix]
 
     if clone == self:
       del clone
@@ -817,8 +956,6 @@ class assemblyClass(geomClass):
     clone = assemblyClass(source=self)
     lattice = self.getLattice(1)
     corners = lattice.getCorners(origin)
-    if ldebug:
-      print 'assembly:', iz, origin, corners, ':', radius, outerRadius, ':', lattice
     if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
       pass
     else:
@@ -829,11 +966,24 @@ class assemblyClass(geomClass):
             clone.setLattice(iz+1,clone.getLattice(iz))
             continue
         newlattice = lattice.replaceMaterials(radius, material, origin, outerRadius)
-        if ldebug:
-          print iz, newlattice
         clone.setLattice(iz+1,newlattice)
-    if ldebug:
-      print
+
+    if clone == self:
+      del clone
+      return self
+    else:
+      return assemblyClass.addAssembly(clone)
+
+  def addRings(self, radii, materials, fill_material, origin):
+    clone = assemblyClass(source=self)
+    for iz in range(self._nz):
+      lattice = self.getLattice(iz+1)
+      if iz > 0:
+        if lattice is self.getLattice(iz):
+          clone.setLattice(iz+1,clone.getLattice(iz))
+          continue
+      newlattice = lattice.addRings(radii, materials, fill_material, origin)
+      clone.setLattice(iz+1,newlattice)
 
     if clone == self:
       del clone
@@ -885,7 +1035,10 @@ class assemblyClass(geomClass):
 
   def edit(self):
     print '  assembly ' + format(self._id,'3d')
-    print '    ' + ' '.join(format(lattice._id,'4d') for lattice in self._lattices)
+    if edit_layer > 0 and edit_layer <= self._nz:
+      print '    ' + format(self._lattices[edit_layer-1]._id,'4d')
+    else:
+      print '    ' + ' '.join(format(lattice._id,'4d') for lattice in self._lattices)
 
 class coreClass:
   _assemblies = []
@@ -909,11 +1062,11 @@ class coreClass:
     self._assemblies[iy-1][ix-1] = assembly
     if not assembly:
       return
-    if self._delx[ix-1] > 0.0 and self._delx[ix-1] != assembly.getX():
+    if self._delx[ix-1] > 0.0 and not np.isclose(self._delx[ix-1], assembly.getX()):
       raise ValueError
     else:
       self._delx[ix-1] = assembly.getX()
-    if self._dely[iy-1] > 0.0 and self._dely[iy-1] != assembly.getY():
+    if self._dely[iy-1] > 0.0 and not np.isclose(self._dely[iy-1], assembly.getY()):
       raise ValueError
     else:
       self._dely[iy-1] = assembly.getY()
@@ -970,19 +1123,12 @@ class coreClass:
         assembly = self.getAssembly(ix+1,iy+1)
         if assembly:
           corners = assembly.getLattice(1).getCorners([xstart, ystart])
-          if ldebug:
-            if iy == 0:
-              print 'core:', iy, ix, ystart, xstart, ':', radius, outerRadius
           if not any(pointsInCircle(corners, outerRadius)) or all(pointsInCircle(corners, radius)):
             newAssembly = assembly
           else:
             newAssembly = assembly.replaceMaterials(radius, material, [xstart, ystart], outerRadius)
-          if ldebug:
-            print iy, ix, newAssembly
           self.setAssembly(ix+1,iy+1,newAssembly)
         xstart += self._delx[ix]
-        if ldebug:
-          print
       ystart += self._dely[iy]
 
   def prune(self):
@@ -1037,318 +1183,91 @@ class coreClass:
     for j in range(self._ny):
       print '    ' + ' '.join(format(assembly._id,'3d') if assembly else '   ' for assembly in self._assemblies[j])
 
-def buildGraphiteBlockCenter(height, material=None):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
-  if not material:
-    material = materials['Graphite']
-
-  # Useful values
-  cell_length_long = channel_length - 2*channel_radius
-  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
-  nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
-  nsub_long = 2*nsub_short
-
-  # Set the small graphite square pins - 4 corners and 4 diagonal locations (excluding center)
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)],height)
-  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_short*nsub_short)])
-  for (ix, iy) in zip([2, 4, 2, 4], [2, 2, 4, 4]):
-    newLattice.setPin(ix,iy,newPin)
-
-  # Set the N/S rectangular graphite pieces
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_long)], \
-      [1 for i in range(nsub_short)],height)
-  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_long*nsub_short)])
-  newLattice.setPin(3,2,newPin)
-  newLattice.setPin(3,4,newPin)
-
-  # Set the E/W rectangular graphite pieces
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)],height)
-  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_short*nsub_long)])
-  newLattice.setPin(2,3,newPin)
-  newLattice.setPin(4,3,newPin)
-
-  # Set the center pin cell
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_long)], \
-      [1 for i in range(nsub_long)],height)
-  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_long*nsub_long)])
-  newLattice.setPin(3,3,newPin)
-
-  return newLattice
-
-def fillLatticeOutsideLayer(height,material):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
-
-  # Useful values
-  cell_length_long = channel_length - 2*channel_radius
-  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
-  nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
-  nsub_long = 2*nsub_short
-
-  # Set the small graphite square pins
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)],height)
-  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_short*nsub_short)])
-  for (ix, iy) in zip([1, 2, 4, 5, 1, 5, 1, 5, 1, 2, 4, 5], [1, 1, 1, 1, 2, 2, 4, 4, 5, 5, 5, 5]):
-    newLattice.setPin(ix,iy,newPin)
-
-  # Set the N/S rectangular graphite pieces
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_long)], \
-      [1 for i in range(nsub_short)],height)
-  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_long*nsub_short)])
-  newLattice.setPin(3,1,newPin)
-  newLattice.setPin(3,5,newPin)
-
-  # Set the E/W rectangular graphite pieces
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)],height)
-  newPin = pinClass.create(newPinMesh, [material for i in range(nsub_short*nsub_long)])
-  newLattice.setPin(1,3,newPin)
-  newLattice.setPin(5,3,newPin)
-
-  return newLattice
-
-def buildGcylCenter3x3(height,radii,subr,subazi,materials):
-  newLattice = fillLatticeOutsideLayer(height,materials[-1])
-
-  # Useful values
-  cell_length_long = channel_length - 2*channel_radius
-  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
-
-  xvals = [-cell_length_long/2.0 - cell_length_short, -cell_length_long/2.0, \
-      cell_length_long/2.0, cell_length_long/2.0 + cell_length_short]
-  yvals = [val for val in reversed(xvals)]
-  for ix in range(3):
-    for iy in range(3):
-      newPinMesh = pinmeshClass_cyls.create(radii=radii,subr=subr,subazi=subazi,xMin=xvals[ix],xMax=xvals[ix+1], \
-          yMin=yvals[iy+1],yMax=yvals[iy],height=height)
-      newPin = pinClass.create(newPinMesh, materials)
-      newLattice.setPin(ix+2,iy+2,newPin)
-
-  return newLattice
-
-def buildGcylCenter5x5(height,radii,subr,subazi,materials):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
-
-  # Useful values
-  cell_length_long = channel_length - 2*channel_radius
-  cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
-
-  xvals = [-cell_length_long/2.0 - 2.0*cell_length_short, -cell_length_long/2.0 - cell_length_short, \
-      -cell_length_long/2.0, cell_length_long/2.0, cell_length_long/2.0 + cell_length_short, \
-      cell_length_long/2.0 + 2.0*cell_length_short]
-  yvals = [val for val in reversed(xvals)]
-  for ix in range(5):
-    for iy in range(5):
-      newPinMesh = pinmeshClass_cyls.create(radii=radii,subr=subr,subazi=subazi,xMin=xvals[ix],xMax=xvals[ix+1], \
-          yMin=yvals[iy+1],yMax=yvals[iy],height=height)
-      newPin = pinClass.create(newPinMesh, materials)
-      newLattice.setPin(ix+1,iy+1,newPin)
-
-  return newLattice
-
 def buildGraphiteStringerLattice(height):
-  newLattice = buildGraphiteBlockCenter(height)
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
 
-  newPin = newLattice.getPin(2,2)
-  for (ix, iy) in zip([1, 5, 1, 5], [1, 1, 5, 5]):
-    newLattice.setPin(ix,iy,newPin)
-
-  # Set the W/E fuel channel sides
-  newPinMesh = newLattice.getPin(2,3)._pinmesh
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite', \
-      'Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt', \
-      'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite']])
-  newLattice.setPin(1,3,newPin)
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Graphite','Fuel Salt','Fuel Salt', \
-      'Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt', \
-      'Fuel Salt','Graphite','Fuel Salt','Fuel Salt','Graphite','Fuel Salt','Fuel Salt']])
-  newLattice.setPin(5,3,newPin)
-
-  # Set the N/S fuel channel sides
-  newPinMesh = newLattice.getPin(3,2)._pinmesh
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Fuel Salt', \
-      'Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt', \
-      'Fuel Salt','Graphite','Graphite','Graphite','Graphite','Graphite','Graphite']])
-  newLattice.setPin(3,1,newPin)
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Graphite','Graphite','Graphite','Graphite', \
-      'Graphite','Graphite','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt', \
-      'Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt','Fuel Salt']])
-  newLattice.setPin(3,5,newPin)
-
-  # Set the NE quarter pins
-  newPinMesh = pinmeshClass_qcyl.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
-      [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, height, 1)
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newLattice.setPin(1,2,newPin)
-  newLattice.setPin(4,5,newPin)
-
-  # Set the NW quarter pins
-  newPinMesh = pinmeshClass_qcyl.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
-      [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, height, 2)
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newLattice.setPin(5,2,newPin)
-  newLattice.setPin(2,5,newPin)
-
-  # Set the SW quarter pins
-  newPinMesh = pinmeshClass_qcyl.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
-      [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, height, 3)
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newLattice.setPin(2,1,newPin)
-  newLattice.setPin(5,4,newPin)
-
-  # Set the SE quarter pins
-  newPinMesh = pinmeshClass_qcyl.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short-1)], \
-      [1 for i in range(nsub_short-1)], [1 for i in range(nsub_short)], cell_length_short, height, 4)
-  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Fuel Salt','Fuel Salt','Graphite']])
-  newLattice.setPin(4,1,newPin)
-  newLattice.setPin(1,4,newPin)
+  newPinMesh = pinmeshClass_msre.create(height)
+  newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Graphite'] + \
+      ['Fuel Salt']*4])
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildUniformLattice(material, height):
-  newLattice = buildGraphiteBlockCenter(height, material)
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
 
-  # Copy small graphite blocks
-  for (ix,iy) in zip([1, 2, 4, 5, 1, 5, 1, 5, 1, 2, 4, 5], [1, 1, 1, 1, 2, 2, 4, 4, 5, 5, 5, 5]):
-    newLattice.setPin(ix,iy,newLattice.getPin(2,2))
-
-  # Copy E/W graphite blocks
-  newLattice.setPin(1,3,newLattice.getPin(2,3))
-  newLattice.setPin(5,3,newLattice.getPin(2,3))
-
-  # Copy N/S graphite blocks
-  newLattice.setPin(3,1,newLattice.getPin(3,2))
-  newLattice.setPin(3,5,newLattice.getPin(3,2))
-
-  newLattice = newLattice.replaceMaterials(0.0, material, [0.0, 0.0])
+  newPinMesh = pinmeshClass_rect.create([block_pitch*(i+1)/10 for i in range(10)], [block_pitch*(i+1)/10 for i in range(10)], \
+      [1 for i in range(10)], [1 for i in range(10)], height)
+  newPin = pinClass.create(newPinMesh, [material for i in range(100)])
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildSupportLattice1(height):
-  newLattice = buildGraphiteBlockCenter(height)
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
 
   salt_width = 0.47625
+  graphite_width = block_pitch - 2.0*salt_width
 
-  # Copy the center portions to the N/S edges
-  newPin = newLattice.getPin(3,2)
-  newLattice.setPin(3,1,newPin)
-  newLattice.setPin(3,5,newPin)
-
-  newPin = newLattice.getPin(2,2)
-  newLattice.setPin(2,1,newPin)
-  newLattice.setPin(2,5,newPin)
-  newLattice.setPin(4,1,newPin)
-  newLattice.setPin(4,5,newPin)
-
-  # Set the W small salt/graphite squares
-  newPinMesh = pinmeshClass_rect.create([salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]*nsub_short)
-  for iy in [1, 2, 4, 5]:
-    newLattice.setPin(1,iy,newPin)
-
-  # Set the E small salt/graphite squares
-  newPinMesh = pinmeshClass_rect.create([cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
-      [cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_short)
-  for iy in [1, 2, 4, 5]:
-    newLattice.setPin(5,iy,newPin)
-
-  # Set the W long salt/graphite rectangles
-  newPinMesh = pinmeshClass_rect.create([salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short)]*nsub_long)
-  newLattice.setPin(1,3,newPin)
-
-  # Set the E long salt/graphite rectangles
-  newPinMesh = pinmeshClass_rect.create([cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
-      [cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], [1 for i in range(nsub_short)], \
-      [1 for i in range(nsub_long)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short)]*nsub_long)
-  newLattice.setPin(5,3,newPin)
+  mesh = [salt_width] + [salt_width + graphite_width*(i+1)/8 for i in range(8)] + [block_pitch]
+  newPinMesh = pinmeshClass_rect.create(mesh, mesh, [1 for i in range(10)], [1 for i in range(10)], height)
+  matlist = [materials['Fuel Salt']] + [materials['Graphite']]*8 + [materials['Fuel Salt']]
+  matlist = matlist*10
+  newPin = pinClass.create(newPinMesh, matlist)
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildSupportLattice2(height):
-  newLattice = buildGraphiteBlockCenter(height)
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
 
-  salt_width = 0.47625
+  salt_height = 0.47625
+  graphite_height = block_pitch - 2.0*salt_height
 
-  # Copy the center portions to the E/W edges
-  newPin = newLattice.getPin(2,3)
-  newLattice.setPin(1,3,newPin)
-  newLattice.setPin(5,3,newPin)
-
-  newPin = newLattice.getPin(2,2)
-  newLattice.setPin(1,2,newPin)
-  newLattice.setPin(5,2,newPin)
-  newLattice.setPin(1,4,newPin)
-  newLattice.setPin(5,4,newPin)
-
-  # Set the N small salt/graphite squares
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
-      [1 for i in range(nsub_short)], [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1) <= 2*nsub_short else materials['Graphite'] for i in range(nsub_short*nsub_short)])
-  for ix in [1, 2, 4, 5]:
-    newLattice.setPin(ix,1,newPin)
-
-  # Set the S small salt/graphite squares
-  newPinMesh = pinmeshClass_rect.create([cell_length_short*(i+1)/nsub_short for i in range(nsub_short)], \
-      [salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
-      [1 for i in range(nsub_short)], [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1) <= nsub_short else materials['Fuel Salt'] for i in range(nsub_short*nsub_short)])
-  for ix in [1, 2, 4, 5]:
-    newLattice.setPin(ix,5,newPin)
-
-  # Set the N long salt/graphite squares
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [cell_length_short - salt_width*i/(nsub_short-1) for i in reversed(range(nsub_short))], \
-      [1 for i in range(nsub_long)], [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'] if (i+1)*3 <= 2*nsub_long*nsub_short else materials['Graphite'] for i in range(nsub_long*nsub_short)])
-  newLattice.setPin(3,1,newPin)
-
-  # Set the S long salt/graphite squares
-  newPinMesh = pinmeshClass_rect.create([cell_length_long*(i+1)/nsub_long for i in range(nsub_long)], \
-      [salt_width*(i+1)/(nsub_short-1) for i in range(nsub_short-1)] + [cell_length_short], \
-      [1 for i in range(nsub_long)], [1 for i in range(nsub_short)], height)
-  newPin = pinClass.create(newPinMesh, [materials['Graphite'] if (i+1)*3 <= nsub_long*nsub_short else materials['Fuel Salt'] for i in range(nsub_long*nsub_short)])
-  newLattice.setPin(3,5,newPin)
+  mesh = [salt_height] + [salt_height + graphite_height*(i+1)/8 for i in range(8)] + [block_pitch]
+  newPinMesh = pinmeshClass_rect.create(mesh, mesh, [1 for i in range(10)], [1 for i in range(10)], height)
+  matlist = [materials['Fuel Salt']]*10 + [materials['Graphite']]*10*8 + [materials['Fuel Salt']]*10
+  newPin = pinClass.create(newPinMesh, matlist)
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildTaperedStringerLattice(height):
-  newLattice = buildGcylCenter3x3(height,[np.sqrt(2.54*2.54/3)],[1],[1], \
-      [materials['Graphite'], materials['Fuel Salt']])
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+
+  newPinMesh = pinmeshClass_cyls.create([np.sqrt(2.54*2.54/3)], [3], [8]*3, \
+      -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'], materials['Graphite']])
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildControlLattice(height):
-  newLattice = buildGcylCenter5x5(height,control_rod_radii, control_rod_submesh, [1]*(sum(control_rod_submesh)), \
-      [materials[material] for material in control_rod_materials])
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+
+  newPinMesh = pinmeshClass_cyls.create(control_rod_radii, control_rod_submesh, [8]*sum(control_rod_submesh), \
+      -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
+  newPin = pinClass.create(newPinMesh, [materials[material] for material in control_rod_materials])
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildDowelLattice(height):
-  newLattice = buildGcylCenter3x3(height, [dowel_radius], [1], [1], [materials['Graphite'], materials['Fuel Salt']])
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+
+  newPinMesh = pinmeshClass_cyls.create([dowel_radius], [3], [8]*3, -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'], materials['Graphite']])
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildSampleBasketLattice(height):
-  newLattice = buildGcylCenter5x5(height, sample_basket_radius, sample_basket_submesh, [1]*(sum(sample_basket_submesh)), \
-      [materials['Homogenized Sample Basket'], materials['Inconel']])
+  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+
+  newPinMesh = pinmeshClass_cyls.create(sample_basket_radius, sample_basket_submesh, [8]*sum(sample_basket_submesh), \
+      -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'], materials['Homogenized Sample Basket'], materials['Inconel']])
+  newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
@@ -1390,13 +1309,16 @@ def buildGraphiteStringerAssembly_Standard():
 
   return newAssembly.addObject(newAssembly)
 
-def buildControlAssembly():
+def buildGraphiteStringerAssembly_NoTaper():
   newAssembly = assemblyClass()
 
-  # Active core reigon
-  newLattice = buildControlLattice(active_fuel_height)
+  # Add the standard lattice
+  newLattice = buildGraphiteStringerLattice(active_fuel_height)
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
+
+  # Add the non-tapered top
+  newAssembly.extrudeTop(stringer_top_taper_height)
 
   # Add bottom support lattices
   newLattice = buildSupportLattice1(support_lattice_height)
@@ -1405,15 +1327,16 @@ def buildControlAssembly():
   newAssembly.addBottomLattice(newLattice)
 
   # Add dowel section
-  newLattice = buildUniformLattice(materials['Fuel Salt'], dowel_section_height)
+  newLattice = buildDowelLattice(dowel_section_height)
   newAssembly.addBottomLattice(newLattice)
 
-  # Tapered top level
-  newLattice = newLattice.extrude(stringer_top_taper_height)
-  newAssembly.addTopLattice(newLattice)
+  # Add lower head
+  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+  for i in range(lower_head_levels):
+    newAssembly.addBottomLattice(newLattice)
 
-  # Plenum
-  newLattice = newLattice.extrude(upper_plenum_height)
+  # Add level of salt above graphite
+  newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
   newAssembly.addTopLattice(newLattice)
 
   # Add upper head
@@ -1421,18 +1344,13 @@ def buildControlAssembly():
   for i in range(upper_head_levels):
     newAssembly.addTopLattice(newLattice)
 
-  # Add lower head
-  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
-  for i in range(lower_head_levels):
-    newAssembly.addBottomLattice(newLattice)
-
   return newAssembly.addObject(newAssembly)
 
-def buildSampleBasketAssembly():
+def buildGraphiteStringerAssembly_Center():
   newAssembly = assemblyClass()
 
-  # Active core region
-  newLattice = buildSampleBasketLattice(active_fuel_height)
+  # Add the standard lattice
+  newLattice = buildGraphiteStringerLattice(active_fuel_height)
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
@@ -1451,9 +1369,83 @@ def buildSampleBasketAssembly():
   for i in range(lower_head_levels):
     newAssembly.addBottomLattice(newLattice)
 
-  # Add the tapered top
-  newLattice = buildTaperedStringerLattice(stringer_top_taper_height)
+  # Add the non-tapered top
+  newLattice = buildUniformLattice(materials['Fuel Salt'], stringer_top_taper_height)
   newAssembly.addTopLattice(newLattice)
+
+  # Add level of salt above graphite
+  newLattice = newLattice.extrude(upper_plenum_height)
+  newAssembly.addTopLattice(newLattice)
+
+  # Add upper head
+  newLattice = newLattice.extrude(upper_head_height)
+  for i in range(upper_head_levels):
+    newAssembly.addTopLattice(newLattice)
+
+  return newAssembly.addObject(newAssembly)
+
+def buildControlAssembly():
+  newAssembly = assemblyClass()
+
+  # Active core reigon
+  newLattice = buildControlLattice(active_fuel_height)
+  for i in range(n_fuel_planes):
+    newAssembly.addTopLattice(newLattice)
+
+  # Tapered top level
+  newLattice = newLattice.extrude(stringer_top_taper_height)
+  newAssembly.addTopLattice(newLattice)
+
+  # Plenum
+  newLattice = newLattice.extrude(upper_plenum_height)
+  newAssembly.addTopLattice(newLattice)
+
+  # Add upper head
+  for i in range(upper_head_levels):
+    newAssembly.extrudeTop(upper_head_height)
+
+  # Add bottom support lattices
+  newLattice = buildSupportLattice1(support_lattice_height)
+  newAssembly.addBottomLattice(newLattice)
+  newLattice = buildSupportLattice2(support_lattice_height)
+  newAssembly.addBottomLattice(newLattice)
+
+  # Add dowel section
+  newLattice = buildUniformLattice(materials['Fuel Salt'], dowel_section_height)
+  newAssembly.addBottomLattice(newLattice)
+
+  # Add lower head
+  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+  for i in range(lower_head_levels):
+    newAssembly.addBottomLattice(newLattice)
+
+  return newAssembly.addObject(newAssembly)
+
+def buildSampleBasketAssembly():
+  newAssembly = assemblyClass()
+
+  # Active core region
+  newLattice = buildSampleBasketLattice(active_fuel_height)
+  for i in range(n_fuel_planes):
+    newAssembly.addTopLattice(newLattice)
+
+  # Add the tapered top
+  newAssembly.extrudeTop(stringer_top_taper_height)
+
+  # Add bottom support lattices
+  newLattice = buildSupportLattice1(support_lattice_height)
+  newAssembly.addBottomLattice(newLattice)
+  newLattice = buildSupportLattice2(support_lattice_height)
+  newAssembly.addBottomLattice(newLattice)
+
+  # Add dowel section
+  newLattice = buildDowelLattice(dowel_section_height)
+  newAssembly.addBottomLattice(newLattice)
+
+  # Add lower head
+  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+  for i in range(lower_head_levels):
+    newAssembly.addBottomLattice(newLattice)
 
   # Add level of salt above graphite
   newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
@@ -1469,7 +1461,7 @@ def buildSampleBasketAssembly():
 def buildFillAssembly():
   newAssembly = assemblyClass()
 
-  newLattice = buildUniformLattice(materials['Cell Gas'], active_fuel_height)
+  newLattice = buildUniformLattice(materials[fill_material], active_fuel_height)
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
@@ -1517,38 +1509,49 @@ def pruneUnusedObjects(core):
 
 # Core Parameters
 material_names = ['Fuel Salt', 'INOR-8', 'Graphite', 'Cell Gas', 'Helium Gas', 'Stainlesss Steel', 'Inconel', \
-    'Control Rod Poison', 'Insulation', 'Thermal Shield', 'Homogenized Sample Basket', 'Lower Head']
-materials = {key: id for (key, id) in zip(material_names, [1,2,3,4,5,6,7,8,9,10,11,12])}
-reflector_radii = [70.168, 70.485, 71.12, 73.66, 76.2]#, 102.87, 118.11, 120.65, 156.21, 158.75]
-reflector_materials = ['Fuel Salt', 'INOR-8', 'Fuel Salt', 'INOR-8', 'Cell Gas', 'Insulation', \
-  'Stainlesss Steel', 'Thermal Shield', 'Stainlesss Steel']
+    'Control Rod Poison', 'Insulation', 'Thermal Shield', 'Homogenized Sample Basket', 'Lower Head', \
+    'Control Inconel', 'Control Helium Gas']
+materials = {key: id for (key, id) in zip(material_names, [1,2,3,4,5,6,7,8,9,10,11,12,13,14])}
+reflector_radii = [70.168, 70.485, 71.12, 73.66, 76.2] #, 102.87, 118.11, 120.65, 156.21, 158.75]
+reflector_materials = ['Fuel Salt', 'INOR-8', 'Fuel Salt', 'INOR-8'] #, 'Cell Gas', 'Insulation', \
+  # 'Stainlesss Steel', 'Thermal Shield', 'Stainlesss Steel']
 reflector_names = ['Graphite Core', 'Core Can Inner Radius', 'Core Can Outer Radius', 'Vessel Inner Radius', \
     'Vessel Outer Radius', 'Insulation Inner Radius', 'Insulation Outer Radius', 'Thermal Shield Inner Radius', \
     'Thermal Shield Outer Radius', 'Model Outer Radius']
+fill_material = 'Helium Gas'
 
 # Edit controls
 float_edit_format = '9.6f'
-visit_cyls_cells = [10, 10]
+visit_cyls_cells = [50, 50]
+# 0 = All
+# 1 = lower head
+# 4 = dowel
+# 5 = support 1
+# 6 = support 2
+# 22 = stringers
+# 23 = taper
+# 26 = upper head
+edit_layer = 0
 
 # Fuel block parameters
-block_pitch = 5.08 #5.07492
+block_pitch = 5.08
 channel_length = 3.048
 channel_width = 0.508
 channel_radius = 0.508
-pins_per_lattice = 5
+flat_length = channel_length - 2.0*channel_radius
+pins_per_lattice = 1
 n_fuel_planes = 16
 dowel_radius = 2.54/2.0
 
 # Sample Basket parameters
-# sample_basket_radius = [2.605, 2.685]
-sample_basket_radius = [2.539] #approximated due to MPACT standard input limitations
-sample_basket_submesh = [1]
+sample_basket_radius = [2.605, 2.685]
+sample_basket_submesh = [5, 1]
 
 # Control parameters
-control_rod_radii = [0.2245, 0.79375, 0.9525, 1.0033, 1.0541, 1.0668, 1.3716, 1.397, 1.4478, 2.3749, 2.539] #approximated down from 2.54
-control_rod_submesh = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-control_rod_materials = ['Inconel', 'Cell Gas', 'Stainlesss Steel', 'Cell Gas', 'Inconel', 'Helium Gas', \
-    'Control Rod Poison', 'Helium Gas', 'Inconel', 'Cell Gas', 'Inconel', 'Fuel Salt']
+control_rod_radii = [0.2245, 0.79375, 0.9525, 1.0033, 1.0541, 1.0668, 1.3716, 1.397, 1.4478, 2.3749, 2.540]
+control_rod_submesh = [1, 1, 1, 1, 1, 3, 1, 1, 1, 3, 1]
+control_rod_materials = ['Fuel Salt', 'Inconel', 'Cell Gas', 'Stainlesss Steel', 'Cell Gas', 'Control Inconel', \
+    'Control Helium Gas', 'Control Rod Poison', 'Control Helium Gas', 'Control Inconel', 'Cell Gas', 'Inconel']
 
 # mesh heights
 lower_head_levels = 3
@@ -1561,12 +1564,6 @@ upper_plenum_height = 9.487
 upper_head_levels = 2
 upper_head_height = 23.997/float(upper_head_levels)
 
-# Radial mesh parameters
-cell_length_long = channel_length - 2*channel_radius
-cell_length_short = (block_pitch - cell_length_long)/(pins_per_lattice - 1)
-nsub_short = 3 # Needs to be a multiple of 3 for radii to line up
-nsub_long = 2*nsub_short
-
 ldebug = False
 # Calculate how many lattices we need in the core
 assemblies_across_core = 1
@@ -1576,36 +1573,63 @@ core = coreClass(assemblies_across_core, assemblies_across_core)
 
 # Build the basic assemblies
 graphiteStringerAssembly_Standard = buildGraphiteStringerAssembly_Standard()
+graphiteStringerAssembly_NoTaper = buildGraphiteStringerAssembly_NoTaper()
+graphiteStringerAssembly_Center = buildGraphiteStringerAssembly_Center()
 ControlAssembly = buildControlAssembly()
 SampleBasketAssembly = buildSampleBasketAssembly()
 fillAssembly = buildFillAssembly()
 
+# Need the center location for special assemblies
+center_assem = assemblies_across_core/2+1
+
 # Set all core lattices to the graphite stringer
 for iy in range(core._ny):
   for ix in range(core._nx):
-    core.setAssembly(ix+1,iy+1,graphiteStringerAssembly_Standard)
+    # Set the center row
+    if iy+1 == center_assem and (ix+1 < center_assem-2 or ix+1 > center_assem+2):
+      core.setAssembly(ix+1,iy+1,graphiteStringerAssembly_NoTaper)
+    # Set the center column
+    elif ix+1 == center_assem and (iy+1 < center_assem-2 or iy+1 > center_assem+2):
+      core.setAssembly(ix+1,iy+1,graphiteStringerAssembly_NoTaper)
+    # Set the center 3x3 cross
+    elif any([ix+1,iy+1] == test for test in [[center_assem, center_assem], \
+        [center_assem+1, center_assem], [center_assem-1, center_assem], \
+        [center_assem, center_assem+1], [center_assem, center_assem-1]]):
+      core.setAssembly(ix+1,iy+1,graphiteStringerAssembly_Center)
+    else:
+      core.setAssembly(ix+1,iy+1,graphiteStringerAssembly_Standard)
 
 # Set the control rod locations
-center_assem = assemblies_across_core/2+1
 core.setAssembly(center_assem-1,center_assem-1,ControlAssembly)
 core.setAssembly(center_assem+1,center_assem-1,ControlAssembly)
 core.setAssembly(center_assem-1,center_assem+1,ControlAssembly)
 # Set the sample basket location
 core.setAssembly(center_assem+1,center_assem+1,SampleBasketAssembly)
 
+# Make the core jagged
+core.makeJagged(reflector_radii[-1])
+
 # Now set all the lattices outside the graphite lattice radius
 for iy in reversed(range(core._ny)):
   for ix in range(core._nx):
-    if all([not inCircle for inCircle in pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])]):
-      core.setAssembly(ix+1,iy+1,fillAssembly)
-
-core.makeJagged(reflector_radii[-1])
-
-for zone in xrange(0,len(reflector_radii)-1):
-  radius = reflector_radii[zone]
-  material = reflector_materials[zone]
-  region = reflector_names[zone]
-  # core.replaceMaterials(radius, materials[material], reflector_radii[zone+1])
+    assembly = core.getAssembly(ix+1,iy+1)
+    if assembly:
+      inCircle = pointsInCircle(core.getAssemblyCorners(ix+1,iy+1), reflector_radii[0])
+      if all(test for test in inCircle):
+        newassembly = assembly
+      elif any(test for test in inCircle):
+        pass
+        newassembly = assembly
+        for zone in xrange(0,len(reflector_radii)-1):
+          radius = reflector_radii[zone]
+          outerRadius = reflector_radii[zone+1]
+          material = reflector_materials[zone]
+          region = reflector_names[zone]
+          newassembly = newassembly.replaceMaterials(radius, materials[material], core.getAssemblyCorners(ix+1,core._ny-iy)[0], outerRadius)
+      else:
+        newassembly = fillAssembly.addRings(reflector_radii, reflector_materials, fill_material, \
+            core.getAssemblyCorners(ix+1,core._ny-iy)[0])
+      core.setAssembly(ix+1,iy+1,newassembly)
 pruneUnusedObjects(core)
 
 if not ldebug:
