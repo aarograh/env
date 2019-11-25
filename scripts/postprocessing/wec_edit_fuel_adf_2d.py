@@ -25,7 +25,10 @@ elif not nodalStr in h5:
 axial = 0
 
 # Read HDF5 datasets
+keff = h5[stateStr + '/keff'].value
 adf = h5[nodalStr + '/ADF'].value
+sflx = h5[nodalStr + '/SFLX'].value
+cur = h5[nodalStr + '/CUR'].value
 flux = h5[nodalStr + '/FLUX'].value
 xss = h5[nodalStr + '/XSS'].value
 nxsf = h5[nodalStr + '/NXSF'].value
@@ -100,8 +103,54 @@ for (direction, name) in zip([WEST, EAST, NORTH, SOUTH], ['WEST', 'EAST', 'NORTH
               adf[direction-1, 1, node, axial, assembly])
   print
 
-for (dataset, name) in zip([xsD, xsab, nxsf, kxsf], \
-    ['DIFFUSION COEFFICIENT', 'ABSORPTION XS', 'NU-FISSION XS', 'KAPPA-FISSION XS']):
+for (direction, name) in zip([WEST, EAST, NORTH, SOUTH], ['WEST', 'EAST', 'NORTH', 'SOUTH']):
+  print '         SURFACE FLUX - ' + str(name) + ' SURFACE'
+  print "COLUMN   ROW        FLUX 1        FLUX 2"
+  column = 0
+  for iy in range(coremap.shape[1]):
+    for side in [0, 1]:
+      if iy == 0 and side == 0 and sym == 4:
+        continue
+      column += 1
+      row = 0
+      for ix in range(coremap.shape[0]):
+        if coremap[ix,iy] == 0:
+          continue
+        assembly = nodal_coremap[ix,iy]-1
+        for level in [NORTHWEST+side, SOUTHWEST+side]:
+          if ix == 0 and level == NORTHWEST+side and sym == 4:
+            continue
+          row += 1
+          node = level-1
+          print "{0:6d}{1:6d}{2:14.6e}{3:14.6e}".format(column, row, sflx[direction-1, 0, node, axial, assembly], \
+              sflx[direction-1, 1, node, axial, assembly])
+  print
+
+for (direction, name) in zip([WEST, EAST, NORTH, SOUTH], ['WEST', 'EAST', 'NORTH', 'SOUTH']):
+  print 'SURFACE CURRENTS      - ' + str(name) + ' SURFACE'
+  print "COLUMN   ROW     CURRENT 1     CURRENT 2"
+  column = 0
+  for iy in range(coremap.shape[1]):
+    for side in [0, 1]:
+      if iy == 0 and side == 0 and sym == 4:
+        continue
+      column += 1
+      row = 0
+      for ix in range(coremap.shape[0]):
+        if coremap[ix,iy] == 0:
+          continue
+        assembly = nodal_coremap[ix,iy]-1
+        for level in [NORTHWEST+side, SOUTHWEST+side]:
+          if ix == 0 and level == NORTHWEST+side and sym == 4:
+            continue
+          row += 1
+          node = level-1
+          print "{0:6d}{1:6d}{2:14.6e}{3:14.6e}".format(column, row, cur[direction-1, 0, node, axial, assembly], \
+              cur[direction-1, 1, node, axial, assembly])
+  print
+
+for (dataset, name) in zip([xsD, xsab, nxsf, kxsf, flux], \
+    ['DIFFUSION COEFFICIENT', 'ABSORPTION XS', 'NU-FISSION XS', 'KAPPA-FISSION XS', 'AVERAGE FLUX']):
   print name
   print "COLUMN   ROW             1             2"
   column = 0
@@ -144,3 +193,5 @@ for iy in range(coremap.shape[1]):
         row_data.append(xsrm[node, axial, assembly])
     if len(row_data) > 0:
       print "{0:6d}".format(column) + ''.join("{0:14.6e}".format(value) for value in row_data)
+
+print 'K-EFF = {0:6d}'.format(keff)
