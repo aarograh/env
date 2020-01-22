@@ -1184,7 +1184,7 @@ class coreClass:
       print '    ' + ' '.join(format(assembly._id,'3d') if assembly else '   ' for assembly in self._assemblies[j])
 
 def buildGraphiteStringerLattice(height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+  newLattice = latticeClass.create(1, 1)
 
   newPinMesh = pinmeshClass_msre.create(height)
   newPin = pinClass.create(newPinMesh, [materials[key] for key in ['Graphite'] + \
@@ -1194,7 +1194,7 @@ def buildGraphiteStringerLattice(height):
   return newLattice.addObject(newLattice)
 
 def buildUniformLattice(material, height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+  newLattice = latticeClass.create(1, 1)
 
   newPinMesh = pinmeshClass_rect.create([block_pitch*(i+1)/10 for i in range(10)], [block_pitch*(i+1)/10 for i in range(10)], \
       [1 for i in range(10)], [1 for i in range(10)], height)
@@ -1203,13 +1203,13 @@ def buildUniformLattice(material, height):
 
   return newLattice.addObject(newLattice)
 
-def buildSupportLattice1(height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+# north/south - bottom
+def buildSupportLattice_NS(height):
+  newLattice = latticeClass.create(1, 1)
 
-  salt_width = 0.47625
-  graphite_width = block_pitch - 2.0*salt_width
+  salt_width = block_pitch - support_lattice_graphite_width
 
-  mesh = [salt_width] + [salt_width + graphite_width*(i+1)/8 for i in range(8)] + [block_pitch]
+  mesh = [salt_width] + [salt_width + support_lattice_graphite_width*(i+1)/8 for i in range(8)] + [block_pitch]
   newPinMesh = pinmeshClass_rect.create(mesh, mesh, [1 for i in range(10)], [1 for i in range(10)], height)
   matlist = [materials['Fuel Salt']] + [materials['Graphite']]*8 + [materials['Fuel Salt']]
   matlist = matlist*10
@@ -1218,13 +1218,13 @@ def buildSupportLattice1(height):
 
   return newLattice.addObject(newLattice)
 
-def buildSupportLattice2(height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+# east/west - top
+def buildSupportLattice_EW(height):
+  newLattice = latticeClass.create(1, 1)
 
-  salt_height = 0.47625
-  graphite_height = block_pitch - 2.0*salt_height
+  salt_height = block_pitch - support_lattice_graphite_width
 
-  mesh = [salt_height] + [salt_height + graphite_height*(i+1)/8 for i in range(8)] + [block_pitch]
+  mesh = [salt_height] + [salt_height + support_lattice_graphite_width*(i+1)/8 for i in range(8)] + [block_pitch]
   newPinMesh = pinmeshClass_rect.create(mesh, mesh, [1 for i in range(10)], [1 for i in range(10)], height)
   matlist = [materials['Fuel Salt']]*10 + [materials['Graphite']]*10*8 + [materials['Fuel Salt']]*10
   newPin = pinClass.create(newPinMesh, matlist)
@@ -1233,9 +1233,9 @@ def buildSupportLattice2(height):
   return newLattice.addObject(newLattice)
 
 def buildTaperedStringerLattice(height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+  newLattice = latticeClass.create(1, 1)
 
-  newPinMesh = pinmeshClass_cyls.create([np.sqrt(2.54*2.54/3)], [3], [8]*3, \
+  newPinMesh = pinmeshClass_cyls.create([stringer_top_taper_radius], [3], [8]*3, \
       -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
   newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'], materials['Graphite']])
   newLattice.setPin(1,1,newPin)
@@ -1243,7 +1243,7 @@ def buildTaperedStringerLattice(height):
   return newLattice.addObject(newLattice)
 
 def buildControlLattice(height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+  newLattice = latticeClass.create(1, 1)
 
   newPinMesh = pinmeshClass_cyls.create(control_rod_radii, control_rod_submesh, [8]*sum(control_rod_submesh), \
       -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
@@ -1252,17 +1252,17 @@ def buildControlLattice(height):
 
   return newLattice.addObject(newLattice)
 
-def buildDowelLattice(height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+def buildDowelLattice(height, material='Graphite'):
+  newLattice = latticeClass.create(1, 1)
 
   newPinMesh = pinmeshClass_cyls.create([dowel_radius], [3], [8]*3, -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
-  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'], materials['Graphite']])
+  newPin = pinClass.create(newPinMesh, [materials['Fuel Salt'], materials[material]])
   newLattice.setPin(1,1,newPin)
 
   return newLattice.addObject(newLattice)
 
 def buildSampleBasketLattice(height):
-  newLattice = latticeClass.create(pins_per_lattice, pins_per_lattice)
+  newLattice = latticeClass.create(1, 1)
 
   newPinMesh = pinmeshClass_cyls.create(sample_basket_radius, sample_basket_submesh, [8]*sum(sample_basket_submesh), \
       -block_pitch/2.0, block_pitch/2.0, -block_pitch/2.0, block_pitch/2.0, height)
@@ -1279,33 +1279,34 @@ def buildGraphiteStringerAssembly_Standard():
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
-  # Add bottom support lattices
-  newLattice = buildSupportLattice1(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-  newLattice = buildSupportLattice2(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add dowel section
-  newLattice = buildDowelLattice(dowel_section_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add lower head
-  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
-  for i in range(lower_head_levels):
+  if is_3D:
+    # Add bottom support lattices
+    newLattice = buildSupportLattice_EW(support_lattice_height)
+    newAssembly.addBottomLattice(newLattice)
+    newLattice = buildSupportLattice_NS(support_lattice_height)
     newAssembly.addBottomLattice(newLattice)
 
-  # Add the tapered top
-  newLattice = buildTaperedStringerLattice(stringer_top_taper_height)
-  newAssembly.addTopLattice(newLattice)
+    # Add dowel section
+    newLattice = buildDowelLattice(dowel_section_height)
+    newAssembly.addBottomLattice(newLattice)
 
-  # Add level of salt above graphite
-  newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
-  newAssembly.addTopLattice(newLattice)
+    # Add lower head
+    newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+    for i in range(lower_head_levels):
+      newAssembly.addBottomLattice(newLattice)
 
-  # Add upper head
-  newLattice = newLattice.extrude(upper_head_height)
-  for i in range(upper_head_levels):
+    # Add the tapered top
+    newLattice = buildTaperedStringerLattice(stringer_top_taper_height)
     newAssembly.addTopLattice(newLattice)
+
+    # Add level of salt above graphite
+    newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
+    newAssembly.addTopLattice(newLattice)
+
+    # Add upper head
+    newLattice = newLattice.extrude(upper_head_height)
+    for i in range(upper_head_levels):
+      newAssembly.addTopLattice(newLattice)
 
   return newAssembly.addObject(newAssembly)
 
@@ -1317,32 +1318,33 @@ def buildGraphiteStringerAssembly_NoTaper():
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
-  # Add the non-tapered top
-  newAssembly.extrudeTop(stringer_top_taper_height)
+  if is_3D:
+    # Add the non-tapered top
+    newAssembly.extrudeTop(stringer_top_taper_height)
 
-  # Add bottom support lattices
-  newLattice = buildSupportLattice1(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-  newLattice = buildSupportLattice2(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add dowel section
-  newLattice = buildDowelLattice(dowel_section_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add lower head
-  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
-  for i in range(lower_head_levels):
+    # Add bottom support lattices
+    newLattice = buildSupportLattice_EW(support_lattice_height)
+    newAssembly.addBottomLattice(newLattice)
+    newLattice = buildSupportLattice_NS(support_lattice_height)
     newAssembly.addBottomLattice(newLattice)
 
-  # Add level of salt above graphite
-  newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
-  newAssembly.addTopLattice(newLattice)
+    # Add dowel section
+    newLattice = buildDowelLattice(dowel_section_height)
+    newAssembly.addBottomLattice(newLattice)
 
-  # Add upper head
-  newLattice = newLattice.extrude(upper_head_height)
-  for i in range(upper_head_levels):
+    # Add lower head
+    newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+    for i in range(lower_head_levels):
+      newAssembly.addBottomLattice(newLattice)
+
+    # Add level of salt above graphite
+    newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
     newAssembly.addTopLattice(newLattice)
+
+    # Add upper head
+    newLattice = newLattice.extrude(upper_head_height)
+    for i in range(upper_head_levels):
+      newAssembly.addTopLattice(newLattice)
 
   return newAssembly.addObject(newAssembly)
 
@@ -1354,33 +1356,34 @@ def buildGraphiteStringerAssembly_Center():
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
-  # Add bottom support lattices
-  newLattice = buildSupportLattice1(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-  newLattice = buildSupportLattice2(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add dowel section
-  newLattice = buildDowelLattice(dowel_section_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add lower head
-  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
-  for i in range(lower_head_levels):
+  if is_3D:
+    # Add bottom support lattices
+    newLattice = buildSupportLattice_EW(support_lattice_height)
+    newAssembly.addBottomLattice(newLattice)
+    newLattice = buildSupportLattice_NS(support_lattice_height)
     newAssembly.addBottomLattice(newLattice)
 
-  # Add the non-tapered top
-  newLattice = buildUniformLattice(materials['Fuel Salt'], stringer_top_taper_height)
-  newAssembly.addTopLattice(newLattice)
+    # Add dowel section
+    newLattice = buildDowelLattice(dowel_section_height)
+    newAssembly.addBottomLattice(newLattice)
 
-  # Add level of salt above graphite
-  newLattice = newLattice.extrude(upper_plenum_height)
-  newAssembly.addTopLattice(newLattice)
+    # Add lower head
+    newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+    for i in range(lower_head_levels):
+      newAssembly.addBottomLattice(newLattice)
 
-  # Add upper head
-  newLattice = newLattice.extrude(upper_head_height)
-  for i in range(upper_head_levels):
+    # Add the non-tapered top
+    newLattice = buildUniformLattice(materials['Fuel Salt'], stringer_top_taper_height)
     newAssembly.addTopLattice(newLattice)
+
+    # Add level of salt above graphite
+    newLattice = newLattice.extrude(upper_plenum_height)
+    newAssembly.addTopLattice(newLattice)
+
+    # Add upper head
+    newLattice = newLattice.extrude(upper_head_height)
+    for i in range(upper_head_levels):
+      newAssembly.addTopLattice(newLattice)
 
   return newAssembly.addObject(newAssembly)
 
@@ -1392,32 +1395,33 @@ def buildControlAssembly():
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
-  # Tapered top level
-  newLattice = newLattice.extrude(stringer_top_taper_height)
-  newAssembly.addTopLattice(newLattice)
+  if is_3D:
+    # Tapered top level
+    newLattice = newLattice.extrude(stringer_top_taper_height)
+    newAssembly.addTopLattice(newLattice)
 
-  # Plenum
-  newLattice = newLattice.extrude(upper_plenum_height)
-  newAssembly.addTopLattice(newLattice)
+    # Plenum
+    newLattice = newLattice.extrude(upper_plenum_height)
+    newAssembly.addTopLattice(newLattice)
 
-  # Add upper head
-  for i in range(upper_head_levels):
-    newAssembly.extrudeTop(upper_head_height)
+    # Add upper head
+    for i in range(upper_head_levels):
+      newAssembly.extrudeTop(upper_head_height)
 
-  # Add bottom support lattices
-  newLattice = buildSupportLattice1(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-  newLattice = buildSupportLattice2(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add dowel section
-  newLattice = buildUniformLattice(materials['Fuel Salt'], dowel_section_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add lower head
-  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
-  for i in range(lower_head_levels):
+    # Add bottom support lattices
+    newLattice = buildSupportLattice_EW(support_lattice_height)
     newAssembly.addBottomLattice(newLattice)
+    newLattice = buildSupportLattice_NS(support_lattice_height)
+    newAssembly.addBottomLattice(newLattice)
+
+    # Add dowel section
+    newLattice = buildUniformLattice(materials['Fuel Salt'], dowel_section_height)
+    newAssembly.addBottomLattice(newLattice)
+
+    # Add lower head
+    newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+    for i in range(lower_head_levels):
+      newAssembly.addBottomLattice(newLattice)
 
   return newAssembly.addObject(newAssembly)
 
@@ -1429,32 +1433,33 @@ def buildSampleBasketAssembly():
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
-  # Add the tapered top
-  newAssembly.extrudeTop(stringer_top_taper_height)
+  if is_3D:
+    # Add the tapered top
+    newAssembly.extrudeTop(stringer_top_taper_height)
 
-  # Add bottom support lattices
-  newLattice = buildSupportLattice1(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-  newLattice = buildSupportLattice2(support_lattice_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add dowel section
-  newLattice = buildDowelLattice(dowel_section_height)
-  newAssembly.addBottomLattice(newLattice)
-
-  # Add lower head
-  newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
-  for i in range(lower_head_levels):
+    # Add bottom support lattices
+    newLattice = buildSupportLattice_EW(support_lattice_height)
+    newAssembly.addBottomLattice(newLattice)
+    newLattice = buildSupportLattice_NS(support_lattice_height)
     newAssembly.addBottomLattice(newLattice)
 
-  # Add level of salt above graphite
-  newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
-  newAssembly.addTopLattice(newLattice)
+    # Add dowel section
+    newLattice = buildDowelLattice(dowel_section_height, 'INOR-8')
+    newAssembly.addBottomLattice(newLattice)
 
-  # Add upper head
-  newLattice = newLattice.extrude(upper_head_height)
-  for i in range(upper_head_levels):
+    # Add lower head
+    newLattice = buildUniformLattice(materials['Lower Head'], lower_head_height)
+    for i in range(lower_head_levels):
+      newAssembly.addBottomLattice(newLattice)
+
+    # Add level of salt above graphite
+    newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
     newAssembly.addTopLattice(newLattice)
+
+    # Add upper head
+    newLattice = newLattice.extrude(upper_head_height)
+    for i in range(upper_head_levels):
+      newAssembly.addTopLattice(newLattice)
 
   return newAssembly.addObject(newAssembly)
 
@@ -1465,32 +1470,33 @@ def buildFillAssembly():
   for i in range(n_fuel_planes):
     newAssembly.addTopLattice(newLattice)
 
-  # Add more lattices for support plane
-  newLattice = newLattice.extrude(support_lattice_height)
-  for i in range(2):
+  if is_3D:
+    # Add more lattices for support plane
+    newLattice = newLattice.extrude(support_lattice_height)
+    for i in range(2):
+      newAssembly.addBottomLattice(newLattice)
+
+    # Add fill for dowel section
+    newLattice = newLattice.extrude(dowel_section_height)
     newAssembly.addBottomLattice(newLattice)
 
-  # Add fill for dowel section
-  newLattice = newLattice.extrude(dowel_section_height)
-  newAssembly.addBottomLattice(newLattice)
+    # Add lower head
+    newLattice = newLattice.extrude(lower_head_height)
+    for i in range(lower_head_levels):
+      newAssembly.addBottomLattice(newLattice)
 
-  # Add lower head
-  newLattice = newLattice.extrude(lower_head_height)
-  for i in range(lower_head_levels):
-    newAssembly.addBottomLattice(newLattice)
-
-  # Tapered top level
-  newLattice = newLattice.extrude(stringer_top_taper_height)
-  newAssembly.addTopLattice(newLattice)
-
-  # Add level of salt above graphite
-  newLattice = newLattice.extrude(upper_plenum_height)
-  newAssembly.addTopLattice(newLattice)
-
-  # Add upper head
-  newLattice = newLattice.extrude(upper_head_height)
-  for i in range(upper_head_levels):
+    # Tapered top level
+    newLattice = newLattice.extrude(stringer_top_taper_height)
     newAssembly.addTopLattice(newLattice)
+
+    # Add level of salt above graphite
+    newLattice = newLattice.extrude(upper_plenum_height)
+    newAssembly.addTopLattice(newLattice)
+
+    # Add upper head
+    newLattice = newLattice.extrude(upper_head_height)
+    for i in range(upper_head_levels):
+      newAssembly.addTopLattice(newLattice)
 
   return newAssembly.addObject(newAssembly)
 
@@ -1512,9 +1518,9 @@ material_names = ['Fuel Salt', 'INOR-8', 'Graphite', 'Cell Gas', 'Helium Gas', '
     'Control Rod Poison', 'Insulation', 'Thermal Shield', 'Homogenized Sample Basket', 'Lower Head', \
     'Control Inconel', 'Control Helium Gas']
 materials = {key: id for (key, id) in zip(material_names, [1,2,3,4,5,6,7,8,9,10,11,12,13,14])}
-reflector_radii = [70.168, 70.485, 71.12, 73.66, 76.2] #, 102.87, 118.11, 120.65, 156.21, 158.75]
-reflector_materials = ['Fuel Salt', 'INOR-8', 'Fuel Salt', 'INOR-8'] #, 'Cell Gas', 'Insulation', \
-  # 'Stainlesss Steel', 'Thermal Shield', 'Stainlesss Steel']
+reflector_radii = [70.285, 71.097, 71.737, 74.299, 76.862, 102.87, 118.11, 120.65, 156.21, 158.75]
+reflector_materials = ['Fuel Salt', 'INOR-8', 'Fuel Salt', 'INOR-8', 'Cell Gas', 'Insulation', \
+    'Stainlesss Steel', 'Thermal Shield', 'Stainlesss Steel']
 reflector_names = ['Graphite Core', 'Core Can Inner Radius', 'Core Can Outer Radius', 'Vessel Inner Radius', \
     'Vessel Outer Radius', 'Insulation Inner Radius', 'Insulation Outer Radius', 'Thermal Shield Inner Radius', \
     'Thermal Shield Outer Radius', 'Model Outer Radius']
@@ -1533,22 +1539,36 @@ visit_cyls_cells = [50, 50]
 # 26 = upper head
 edit_layer = 0
 
-# Fuel block parameters
-block_pitch = 5.08
-channel_length = 3.048
-channel_width = 0.508
-channel_radius = 0.508
+# graphite stringer parameters
+is_3D = True
+if is_3D:
+  total_stringer_height = 162.56
+  n_fuel_planes = 16
+else:
+  total_stringer_height = 1.0
+  n_fuel_planes = 1
+block_pitch = 5.08339
+channel_length = 3.05309
+channel_radius = 0.50885
 flat_length = channel_length - 2.0*channel_radius
-pins_per_lattice = 1
-n_fuel_planes = 16
-dowel_radius = 2.54/2.0
+active_fuel_height = total_stringer_height/float(n_fuel_planes)
+stringer_top_taper_height = 2.391
+stringer_top_taper_radius = np.sqrt((block_pitch/2.0)*(block_pitch/2.0)/3)
+
+# Support/dowel parameters
+dowel_radius = 2.5442/2.0
+center_stringer_dowel_radius = 2.1894
+support_lattice_graphite_width = 4.1344
+dowel_section_height = 3.587
+support_lattice_height = 2.544
 
 # Sample Basket parameters
-sample_basket_radius = [2.605, 2.685]
+sample_basket_radius = [2.628, 2.708]
 sample_basket_submesh = [5, 1]
 
 # Control parameters
-control_rod_radii = [0.2245, 0.79375, 0.9525, 1.0033, 1.0541, 1.0668, 1.3716, 1.397, 1.4478, 2.3749, 2.540]
+control_sample_channel_radius = 3.1992
+control_rod_radii = [0.2265, 0.8006, 0.9608, 1.0120, 1.0633, 1.0761, 1.3835, 1.4091, 1.4604, 4.75033/2.0, 5.08339/2.0]
 control_rod_submesh = [1, 1, 1, 1, 1, 3, 1, 1, 1, 3, 1]
 control_rod_materials = ['Fuel Salt', 'Inconel', 'Cell Gas', 'Stainlesss Steel', 'Cell Gas', 'Control Inconel', \
     'Control Helium Gas', 'Control Rod Poison', 'Control Helium Gas', 'Control Inconel', 'Cell Gas', 'Inconel']
@@ -1556,10 +1576,6 @@ control_rod_materials = ['Fuel Salt', 'Inconel', 'Cell Gas', 'Stainlesss Steel',
 # mesh heights
 lower_head_levels = 3
 lower_head_height = 30.3911/float(lower_head_levels)
-dowel_section_height = 3.5814
-support_lattice_height = 2.54
-active_fuel_height = 10.16
-stringer_top_taper_height = 2.387
 upper_plenum_height = 9.487
 upper_head_levels = 2
 upper_head_height = 23.997/float(upper_head_levels)
