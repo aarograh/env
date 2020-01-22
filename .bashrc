@@ -24,8 +24,7 @@ export PATH=~/env/scripts/MCFR:$PATH
 # Data paths
 export DATA=~/master/SCALE_test_data
 export MPACT_DATA=~/master/VERAData/MPACT
-export THERMOCHIMICA_ROOT=/projects/thermochimica
-export THERMOCHIMICA_DATA=$THERMOCHIMICA_ROOT/data
+export THERMOCHIMICA_DATA=~/master/mstdb/models/Database\ .dat\ Files
 export DATA_DIR=$THERMOCHIMICA_DATA
 
 # Set MPACT repo classification so we can configure correctly
