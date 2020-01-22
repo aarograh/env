@@ -10,11 +10,9 @@ fi
 
 # Set up modules
 export MODULEPATH=/opt/modules/modulefiles:${MODULEPATH}
-module purge
-source /home/tools/gcc-5.4.0/load_dev_env.sh
 
 # Modify paths
-export THERMOCHIMICA_ROOT=/projects/thermochimica
+export THERMOCHIMICA_DATA=~/master/mstdb/models/Database\ .dat\ Files/
 export DATA=~/master/SCALE_test_data
 export MPACT_ADD_REPO_CLASS=Continuous
 export PATH=/opt/bin:$PATH
