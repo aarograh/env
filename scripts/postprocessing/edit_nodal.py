@@ -32,7 +32,7 @@ print "-------------------------------------------------------"
 
 # Get some basic values
 axial_mesh = h5["/CORE/axial_mesh"][...]
-nodal_axial_mesh = h5["/CORE/computational_axial_mesh"]
+nodal_axial_mesh = h5["/STATE_0001/NODAL_XS/AXIALMESH"]
 coremap = h5["/CORE/core_map"][...]
 nodal_coremap = h5["/CORE/computational_core_map"][...]
 assembly_pitch = h5["/CORE/apitch"][...]
@@ -67,6 +67,7 @@ meshstring = ' '.join(str(assembly_pitch) for i in nodal_coremap)
 #  meshstring = ' '.join([meshstring, str(assembly_pitch)])
 #print "NSPACEY " + meshstring
 meshstring = ' '.join(str(nodal_axial_mesh[i+1]-nodal_axial_mesh[i]) for i in xrange(0,len(nodal_axial_mesh)-1))
+print "Number of Axial Nodes: " + str(len(nodal_axial_mesh)-1)
 print "Axial Mesh: " + meshstring
 if sym == 1:
   print "Symmetry: full"
@@ -96,6 +97,20 @@ print "Boundary Conditions:"
 print "  Direction: WEST  | NORTH | EAST  | SOUTH | TOP   | BOTTOM"
 print "  ---------------------------------------------------------"
 print "       Type: " + ' | '.join(["{:5s}".format(i) for i in bcond])
+print "Pins per Assembly: " + str(h5["/STATE_0001/pin_powers"].value.shape[0]) + " " + str(h5["/STATE_0001/pin_powers"].value.shape[1])
+
+# Print the number of nodes in x and y directions
+print "Number of Fuel Assemblies: " + str(np.max(coremap))
+[splitx, splity] = assembliesAreSplit(sym, coremap)
+nx = nodal_coremap.shape[0]*2
+ny = nodal_coremap.shape[1]*2
+if splitx:
+    nx = nx - 1
+if splity:
+    ny = ny - 1
+print "Number of nodes and widths in x direction: " + str(nx) + ' ' + str(A)
+print "Number of nodes and widths in y direction: " + str(ny) + ' ' + str(A)
+
 print 'Fuel Core Map\n  ' +\
     '\n  '.join(map(str, ['  '.join([format(assembly,'3d') for assembly in row[nxoffset:]]) for row in coremap[nyoffset:]]))
 print 'Core Map\n  ' +\
@@ -108,17 +123,17 @@ for i in range(len(nodal_axial_mesh)):
     break
 print "Fuel Start Axial Level: " + str(fuelstartz)
 print "Fuel  Stop Axial Level: " + str(fuelstopz)
+print ""
 
-# Print the number of nodes in x an dy directions
-[splitx, splity] = assembliesAreSplit(sym, coremap)
-nx = nodal_coremap.shape[0]*2
-ny = nodal_coremap.shape[1]*2
-if splitx:
-    nx = nx - 1
-if splity:
-    ny = ny - 1
-print "Number of nodes and widths in x direction: " + str(nx) + ' ' + str(A)
-print "Number of nodes and widths in y direction: " + str(ny) + ' ' + str(A)
+# Print decay constants
+print "I-135 Decay Constant: " + str(h5["/STATE_0001/NODAL_XS/I-135 Decay Constant"].value)
+print "Xe-135 Decay Constant: " + str(h5["/STATE_0001/NODAL_XS/Xe-135 Decay Constant"].value)
+print "Pm-149 Decay Constant: " + str(h5["/STATE_0001/NODAL_XS/Pm-149 Decay Constant"].value)
+print ""
+
+# Precursor data
+print "Number of Delayed Neutron Precursor Groups: " + str(h5["/STATE_0001/NODAL_XS/Delayed Neutron Precursor Decay Constants"].value.shape[0])
+print "Number of Decay Heat Precursor Groups: " + str(h5["/STATE_0001/NODAL_XS/Decay Heat Precursor Decay Constants"].value.shape[0])
 print ""
 
 # Get array and define function to go to fuel assembly index
@@ -138,41 +153,50 @@ while True:
     stateStr = '/STATE_' + str(st).zfill(4)
     if not stateStr in h5:
       break
+    stateStr += '/'
+    nodalStr = stateStr + 'NODAL_XS/'
+    coreStr = stateStr + 'CORE_XS/'
 
-    # Read all the state data
-    keff     = h5[stateStr + '/keff'].value
-    fluxnorm = h5[stateStr + '/NODAL_XS/FLUXNORM'].value
-    boron    = h5[stateStr + '/boron'].value
-    ppw      = h5[stateStr + '/pin_powers'].value
-    adf      = h5[stateStr + '/NODAL_XS/ADF'].value
-    cur      = h5[stateStr + '/NODAL_XS/CUR'].value
-    sfx      = h5[stateStr + '/NODAL_XS/SFLX'].value
-    chi      = h5[stateStr + '/NODAL_XS/CHI'].value
-    flx      = h5[stateStr + '/NODAL_XS/FLUX'].value
-    xf       = h5[stateStr + '/NODAL_XS/XSF'].value
-    nxf      = h5[stateStr + '/NODAL_XS/NXSF'].value
-    kxf      = h5[stateStr + '/NODAL_XS/KXSF'].value
-    xsr      = h5[stateStr + '/NODAL_XS/XSRM'].value
-    xstr     = h5[stateStr + '/NODAL_XS/XSTR'].value
-    xss      = h5[stateStr + '/NODAL_XS/XSS'].value #First two axes are [from, to]
-    swcpv    = h5[stateStr + '/NODAL_XS/CORNERFLUX'].value
-    rhowrefv = h5[stateStr + '/NODAL_XS/COOLDENS'].value # g/cc
-    tfrefv   = h5[stateStr + '/NODAL_XS/FUELTEMP'].value # K
-    tfsrefv  = h5[stateStr + '/NODAL_XS/FUELSURFTEMP'].value # K
-    tcolrefv = h5[stateStr + '/NODAL_XS/COOLTEMP'].value # K
-    wtfrrov  = h5[stateStr + '/NODAL_XS/WETVOLFRAC'].value
-    fufrv    = h5[stateStr + '/NODAL_XS/FUELVOLFRAC'].value
-    dfiv     = h5[stateStr + '/NODAL_XS/I135ND'].value # 1/barn-cm
-    dpmv     = h5[stateStr + '/NODAL_XS/PM149ND'].value # 1/barn-cm
-    dsmv     = h5[stateStr + '/NODAL_XS/SM149ND'].value # 1/barn-cm
-    dxev     = h5[stateStr + '/NODAL_XS/XE135ND'].value # 1/barn-cm
-    xxeabv   = h5[stateStr + '/NODAL_XS/XE135XSAB'].value # barns
-    xsmabv   = h5[stateStr + '/NODAL_XS/SM149XSAB'].value # barns
-    xhidmiv  = h5[stateStr + '/NODAL_XS/CHID'].value
-    betav    = h5[stateStr + '/NODAL_XS/BETA'].value
-    velocv   = h5[stateStr + '/NODAL_XS/VELOCITY'].value # cm/sec
-    burnup   = h5[stateStr + '/NODAL_XS/BURNUP'].value #MWd/kgHM
-    ifractv  = h5[stateStr + '/NODAL_XS/RODFRAC'].value #[0.0, 1.0], 0.0 is fully withdrawn, 1.0 is fully inserted
+    # Read core level data
+    xhidmiv     = h5[coreStr + 'CHID'].value
+    lambda_n    = h5[coreStr + 'Delayed Neutron Precursor Decay Constants'].value
+    lambda_h    = h5[coreStr + 'Decay Heat Precursor Decay Constants'].value
+
+    # Read node level data
+    keff        = h5[stateStr + 'keff'].value
+    core_burnup = h5[stateStr + 'exposure'].value
+    core_efpd   = h5[stateStr + 'exposure_efpd'].value
+    boron       = h5[stateStr + 'boron'].value
+    ppw         = h5[stateStr + 'pin_powers'].value
+    fluxnorm    = h5[nodalStr + 'FLUXNORM'].value
+    cur         = h5[nodalStr + 'CUR'].value
+    sfx         = h5[nodalStr + 'SFLX'].value
+    chi         = h5[nodalStr + 'CHI'].value
+    flx         = h5[nodalStr + 'FLUX'].value
+    xf          = h5[nodalStr + 'XSF'].value
+    nxf         = h5[nodalStr + 'NXSF'].value
+    kxf         = h5[nodalStr + 'KXSF'].value
+    xsr         = h5[nodalStr + 'XSRM'].value
+    xstr        = h5[nodalStr + 'XSTR'].value
+    xss         = h5[nodalStr + 'XSS'].value #First two axes are [from, to]
+    swcpv       = h5[nodalStr + 'CORNERFLUX'].value
+    rhowrefv    = h5[nodalStr + 'MODDENS'].value # g/cc
+    tfrefv      = h5[nodalStr + 'FUELTEMP'].value # K
+    tfsrefv     = h5[nodalStr + 'FUELSURFTEMP'].value # K
+    tcolrefv    = h5[nodalStr + 'MODTEMP'].value # K
+    wtfrrov     = h5[nodalStr + 'WETVOLFRAC'].value
+    fufrv       = h5[nodalStr + 'FUELVOLFRAC'].value
+    dfiv        = h5[nodalStr + 'I135ND'].value # 1/barn-cm
+    dpmv        = h5[nodalStr + 'PM149ND'].value # 1/barn-cm
+    dsmv        = h5[nodalStr + 'SM149ND'].value # 1/barn-cm
+    dxev        = h5[nodalStr + 'XE135ND'].value # 1/barn-cm
+    xxeabv      = h5[nodalStr + 'XE135XSAB'].value # barns
+    xsmabv      = h5[nodalStr + 'SM149XSAB'].value # barns
+    beta_n      = h5[nodalStr + 'BETA'].value
+    beta_h      = h5[nodalStr + 'Decay Heat Precursor Yields'].value
+    velocv      = h5[nodalStr + 'VELOCITY'].value # cm/sec
+    burnup      = h5[nodalStr + 'BURNUP'].value #MWd/kgHM
+    ifractv     = h5[nodalStr + 'RODFRAC'].value #[0.0, 1.0], 0.0 is fully withdrawn, 1.0 is fully inserted
 
     # Before we do anything convert temperatures from K to F
     K2F(tfrefv)
@@ -199,7 +223,20 @@ while True:
     print "  k-eff: {0:7.5f}".format(keff)
     print "  boron: {0:7.2f} ppm".format(boron)
     print "  Flux Normalization: {0:12.5e}".format(fluxnorm)
+    print "  Core Burnup (MWD/kgHM and EFPD): {0:12.5e} {1:12.5e}".format(core_burnup, core_efpd)
     print ""
+
+    print "  Delayed Neutron Spectrum: {0:12.5e} {1:12.5e}".format(xhidmiv[0], xhidmiv[1])
+    tmpstr = "  Delayed Neutron Precursor Decay Constants:"
+    for i in lambda_n:
+      tmpstr = tmpstr + " " + "{0:12.5e}".format(i)
+    print tmpstr
+    tmpstr = "  Decay Heat Precursor Decay Constants:"
+    for i in lambda_h:
+      tmpstr = tmpstr + " " + "{0:12.5e}".format(i)
+    print tmpstr
+    print ""
+
     print "Axial Power"
     for az in reversed(xrange(nz)):
         if az >= fuelstartz-1 and az <= fuelstopz-1:
@@ -237,16 +274,6 @@ while True:
                     chi[0,nd,az,asy], chi[1,nd,az,asy], xss[0,1,nd,az,asy], xss[1,0,nd,az,asy], bal[0], bal[1])
             print ""
 
-            ## ADF
-            #print "ADF"
-            #print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
-            #print "  node  1          2          1          2          1          2          1          2          1          2          1          2"
-            #for nd in xrange(4):
-            #    print "  {0:1d}    {1:10.3e} {2:10.3e} {3:10.3e} {4:10.3e} {5:10.3e} {6:10.3e} {7:10.3e} {8:10.3e} {9:10.3e} {10:10.3e} {11:10.3e} {12:10.3e}".format(\
-            #        nd+1, adf[0,0,nd,az,asy], adf[0,1,nd,az,asy], adf[1,0,nd,az,asy], adf[1,1,nd,az,asy], adf[2,0,nd,az,asy], adf[2,1,nd,az,asy], adf[3,0,nd,az,asy], \
-            #        adf[3,1,nd,az,asy], adf[4,0,nd,az,asy], adf[4,1,nd,az,asy], adf[5,0,nd,az,asy], adf[5,1,nd,az,asy])
-            #print ""
-
             # Currents
             print "Current"
             print "        WEST                  NORTH                 EAST                  SOUTH                 TOP                   BOTTOM"
@@ -282,25 +309,51 @@ while True:
                     nd+1, rhowrefv[nd,az,asy], tcolrefv[nd,az,asy], tfrefv[nd,az,asy], tfsrefv[nd,az,asy], wtfrrov[nd,az,asy], fufrv[nd,az,asy])
             print ""
 
-            # Transient
-            print "Transient"
-            print "        VELOCV                XHIDMIV               BETAV"
-            print "  node  1          2          1          2          1          2          3          4          5          6"
+            # Velocity
+            print "VELOCV"
+            print "  node  1          2"
             for nd in xrange(4):
-                print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e} {9:10.4e} {10:10.4e}".format(\
-                    nd+1, velocv[0,nd,az,asy], velocv[1,nd,az,asy], xhidmiv[0,nd,az,asy], xhidmiv[1,nd,az,asy], betav[0,nd,az,asy], betav[1,nd,az,asy], \
-                    betav[2,nd,az,asy], betav[3,nd,az,asy], betav[4,nd,az,asy], betav[5,nd,az,asy])
+                print "  {0:1d}     {1:10.4e} {2:10.4e}".format(nd+1, velocv[0,nd,az,asy], velocv[1,nd,az,asy])
             print ""
 
-            # Xe/Sm
-            print "Xenon/Samarium"
-            print "        DFIV       DXEV       DPMV       DSMV       XXEABV                XSMABV"
-            print "  node                                              1          2          1          2"
-            for nd in xrange(4):
-                print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e}".format(\
-                    nd+1, dfiv[nd,az,asy], dxev[nd,az,asy], dpmv[nd,az,asy], dsmv[nd,az,asy], xxeabv[0,nd,az,asy], xxeabv[1,nd,az,asy], \
-                    xsmabv[0,nd,az,asy], xsmabv[1,nd,az,asy])
-            print ""
+            if powasy >= 0 and az >= fuelstartz-1 and az <= fuelstopz-1:
+                # Delayed Neutrons
+                print "Delayed Neutron Precursors"
+                yields = ["YIELD {0:2d}   ".format(i+1) for i in range(beta_n.shape[0])]
+                tmpstr = "  node  "
+                for i in yields:
+                    tmpstr += i
+                print tmpstr
+                for nd in xrange(beta_n.shape[1]):
+                    tmpstr = "  {0:1d}    ".format(nd+1)
+                    for i in beta_n[:, nd, az, asy]:
+                        tmpstr += " {0:10.4e}".format(i)
+                    print tmpstr
+                print ""
+
+                # Decay Heat
+                print "Decay Heat Precursors"
+                yields = ["YIELD {0:2d}   ".format(i+1) for i in range(beta_h.shape[0])]
+                tmpstr = "  node  "
+                for i in yields:
+                    tmpstr += i
+                print tmpstr
+                for nd in xrange(beta_h.shape[1]):
+                    tmpstr = "  {0:1d}    ".format(nd+1)
+                    for i in beta_h[:, nd, az, asy]:
+                        tmpstr += " {0:10.4e}".format(i)
+                    print tmpstr
+                print ""
+
+                # Xe/Sm
+                print "Xenon/Samarium"
+                print "        DFIV       DXEV       DPMV       DSMV       XXEABV                XSMABV"
+                print "  node                                              1          2          1          2"
+                for nd in xrange(4):
+                    print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e} {4:10.4e} {5:10.4e} {6:10.4e} {7:10.4e} {8:10.4e}".format(\
+                        nd+1, dfiv[nd,az,asy], dxev[nd,az,asy], dpmv[nd,az,asy], dsmv[nd,az,asy], xxeabv[0,nd,az,asy], xxeabv[1,nd,az,asy], \
+                        xsmabv[0,nd,az,asy], xsmabv[1,nd,az,asy])
+                print ""
 
             # Corner point fluxes
             print "SWCPV"
