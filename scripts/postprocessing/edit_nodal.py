@@ -190,8 +190,10 @@ while True:
     dpmv        = h5[nodalStr + 'PM149ND'].value # 1/barn-cm
     dsmv        = h5[nodalStr + 'SM149ND'].value # 1/barn-cm
     dxev        = h5[nodalStr + 'XE135ND'].value # 1/barn-cm
+    boron_nd    = h5[nodalStr + 'B10ND'].value # 1/barn-cm
     xxeabv      = h5[nodalStr + 'XE135XSAB'].value # barns
     xsmabv      = h5[nodalStr + 'SM149XSAB'].value # barns
+    boron_xs    = h5[nodalStr + 'B10XSAB'].value # barns
     beta_n      = h5[nodalStr + 'BETA'].value
     beta_h      = h5[nodalStr + 'Decay Heat Precursor Yields'].value
     velocv      = h5[nodalStr + 'VELOCITY'].value # cm/sec
@@ -316,6 +318,15 @@ while True:
                 print "  {0:1d}     {1:10.4e} {2:10.4e}".format(nd+1, velocv[0,nd,az,asy], velocv[1,nd,az,asy])
             print ""
 
+            # Xe/Sm
+            print "Boron"
+            print "        BORONND    BORONXS"
+            print "  node             1          2"
+            for nd in xrange(4):
+                print "  {0:1d}     {1:10.4e} {2:10.4e} {3:10.4e}".format(\
+                    nd+1, boron_nd[nd,az,asy], boron_xs[0,nd,az,asy], boron_xs[1,nd,az,asy])
+            print ""
+
             if powasy >= 0 and az >= fuelstartz-1 and az <= fuelstopz-1:
                 # Delayed Neutrons
                 print "Delayed Neutron Precursors"
@@ -346,7 +357,7 @@ while True:
                 print ""
 
                 # Xe/Sm
-                print "Xenon/Samarium"
+                print "Xenon"
                 print "        DFIV       DXEV       DPMV       DSMV       XXEABV                XSMABV"
                 print "  node                                              1          2          1          2"
                 for nd in xrange(4):

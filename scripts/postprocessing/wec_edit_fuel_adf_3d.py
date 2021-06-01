@@ -33,7 +33,8 @@ kxsf = h5[nodalStr + '/KXSF'].value
 coremap = h5['/CORE/core_map'].value
 nodal_coremap = h5['/CORE/computational_core_map'].value
 sym = h5['/CORE/core_sym'].value
-axial_mesh = h5['/CORE/computational_axial_mesh'].value
+axial_mesh = h5[nodalStr + '/AXIALMESH'].value
+#axial_mesh = h5['/CORE/computational_axial_mesh'].value
 
 # Calculate the absorption XS
 xsab = copy.deepcopy(h5[nodalStr + '/XSRM'].value)

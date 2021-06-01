@@ -36,7 +36,7 @@ elif not nodalStr in h5:
 adf = h5[nodalStr + '/ADF'].value
 sflx = h5[nodalStr + '/SFLX'].value
 for (i, j, k, m, n), value in np.ndenumerate(adf):
-  if adf[i,j,k,m,n] == 0.0:
+  if value == 0.0 or np.allclose(sflx[i,j,k,m,n], 0.0):
     sflx[i,j,k,m,n] = 0.0
   else:
     sflx[i,j,k,m,n] /= value
@@ -48,7 +48,7 @@ coremap = h5['/CORE/core_map'].value
 nodal_coremap = h5['/CORE/computational_core_map'].value
 sym = h5['/CORE/core_sym'].value
 axial_mesh = h5['/CORE/axial_mesh'].value
-computational_axial_mesh = h5['/CORE/computational_axial_mesh'].value
+computational_axial_mesh = h5[nodalStr + '/AXIALMESH'].value
 
 #Don't handle full core stuff right now
 if sym != 4:
@@ -212,8 +212,6 @@ def neighborNode(node,dir):
 def calcStandardADF_1neigh(reflassem, refldir, reflnode, axial, weight=None):
   n = len(adf[refldir-1,:,reflnode-1,axial,reflassem-1])
   tmpweight = [1.0 if weight is None else weight[refldir-1,i,reflnode-1,axial,reflassem-1] for i in range(n)]
-  if ldebug:
-    print 'c', adf[refldir-1,:,reflnode-1,axial,reflassem-1],tmpweight[:]
   return adf[refldir-1,:,reflnode-1,axial,reflassem-1]*tmpweight[:]
 
 # This function calculates the standard ADF for a reflector node with 0 or 2 neighboring fuel assemblies
@@ -277,7 +275,6 @@ for axial in xrange(fuel_min,fuel_max):
 
 # Calculate ADFs
 for irefl in range(nrefl):
-  ldebug = (irefl == 13)
   # Set indexes
   iassem = refl_assem[irefl]
   inode = refl_node[irefl]
@@ -323,7 +320,6 @@ if method == EFFECTIVE_ADFS:
 
 # Calculate average ADFs and surface fluxes
 for irefl in range(nrefl):
-  ldebug = (irefl == 13)
   # Set indexes
   iassem = refl_assem[irefl]
   inode = refl_node[irefl]

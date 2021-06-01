@@ -1301,7 +1301,8 @@ def buildGraphiteStringerAssembly_Standard():
 
     # Add level of salt above graphite
     newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
-    newAssembly.addTopLattice(newLattice)
+    for i in range(upper_plenum_levels):
+      newAssembly.addTopLattice(newLattice)
 
     # Add upper head
     newLattice = newLattice.extrude(upper_head_height)
@@ -1339,7 +1340,8 @@ def buildGraphiteStringerAssembly_NoTaper():
 
     # Add level of salt above graphite
     newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
-    newAssembly.addTopLattice(newLattice)
+    for i in range(upper_plenum_levels):
+      newAssembly.addTopLattice(newLattice)
 
     # Add upper head
     newLattice = newLattice.extrude(upper_head_height)
@@ -1378,7 +1380,8 @@ def buildGraphiteStringerAssembly_Center():
 
     # Add level of salt above graphite
     newLattice = newLattice.extrude(upper_plenum_height)
-    newAssembly.addTopLattice(newLattice)
+    for i in range(upper_plenum_levels):
+      newAssembly.addTopLattice(newLattice)
 
     # Add upper head
     newLattice = newLattice.extrude(upper_head_height)
@@ -1402,7 +1405,8 @@ def buildControlAssembly():
 
     # Plenum
     newLattice = newLattice.extrude(upper_plenum_height)
-    newAssembly.addTopLattice(newLattice)
+    for i in range(upper_plenum_levels):
+      newAssembly.addTopLattice(newLattice)
 
     # Add upper head
     for i in range(upper_head_levels):
@@ -1454,7 +1458,8 @@ def buildSampleBasketAssembly():
 
     # Add level of salt above graphite
     newLattice = buildUniformLattice(materials['Fuel Salt'], upper_plenum_height)
-    newAssembly.addTopLattice(newLattice)
+    for i in range(upper_plenum_levels):
+      newAssembly.addTopLattice(newLattice)
 
     # Add upper head
     newLattice = newLattice.extrude(upper_head_height)
@@ -1491,7 +1496,8 @@ def buildFillAssembly():
 
     # Add level of salt above graphite
     newLattice = newLattice.extrude(upper_plenum_height)
-    newAssembly.addTopLattice(newLattice)
+    for i in range(upper_plenum_levels):
+      newAssembly.addTopLattice(newLattice)
 
     # Add upper head
     newLattice = newLattice.extrude(upper_head_height)
@@ -1543,7 +1549,7 @@ edit_layer = 0
 is_3D = True
 if is_3D:
   total_stringer_height = 162.56
-  n_fuel_planes = 16
+  n_fuel_planes = 80 #16
 else:
   total_stringer_height = 1.0
   n_fuel_planes = 1
@@ -1574,10 +1580,11 @@ control_rod_materials = ['Fuel Salt', 'Inconel', 'Cell Gas', 'Stainlesss Steel',
     'Control Helium Gas', 'Control Rod Poison', 'Control Helium Gas', 'Control Inconel', 'Cell Gas', 'Inconel']
 
 # mesh heights
-lower_head_levels = 3
+lower_head_levels = 15 #3
 lower_head_height = 30.3911/float(lower_head_levels)
-upper_plenum_height = 9.487
-upper_head_levels = 2
+upper_plenum_levels = 4
+upper_plenum_height = 9.487/float(upper_plenum_levels)
+upper_head_levels = 10 #2
 upper_head_height = 23.997/float(upper_head_levels)
 
 ldebug = False

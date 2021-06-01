@@ -11,10 +11,11 @@ filename=$(basename "$1")
 filename="${filename%.*}"
 mpact_path=`dirname $mpact`
 ctf_preproc=${mpact_path}/../../COBRA-TF/cobra_tf/xml2ctf/xml2ctf
+verain=${mpact_path}/../../../VERAIO/verain/scripts/react2xml.pl
 
 # Convert verain to xml
 xmlfile=${filename}.xml
-command=`~/master/VERAInExt/verain/scripts/react2xml.pl $infile ${xmlfile}`
+command=`$verain $infile ${xmlfile}`
 echo $command
 $command
 status=$?

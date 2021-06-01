@@ -11,6 +11,8 @@ nstate=1
 h5=h5py.File(sys.argv[1])
 if len(sys.argv) > 2:
   dataset = sys.argv[2]
+else:
+  dataset='ADF'
 
 #5a
 amap=[[ 0,  1,  2,  3,  4,  5,  6,  7,  8],
@@ -35,7 +37,7 @@ nnode=257
 # nxy=2
 # nnode=9
 
-grp=1
+grp=0
 axial=0
 
 for st in xrange(1,nstate+1):
@@ -126,8 +128,8 @@ for st in xrange(1,nstate+1):
     ax = fig.gca()
     ax.set_xticks(np.arange(0, nxy, 1.))
     ax.set_yticks(np.arange(0, -nxy, -1.))
-    #plt.tripcolor(T,pltval,shading='flat',vmin=0,vmax=2)
-    plt.tripcolor(T,pltval,shading='flat')
+    plt.tripcolor(T,pltval,shading='flat',vmin=-1,vmax=2)
+    #plt.tripcolor(T,pltval,shading='flat')
     plt.colorbar()
     plt.grid()
     plt.show()
