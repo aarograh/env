@@ -11,6 +11,9 @@ fi
 # Set up modules
 export MODULEPATH=/opt/modules/modulefiles:${MODULEPATH}
 
+export MPACT_URL_REPO_BASE=git@code-int:VERA/
+export MPACT_ADD_URL_REPO_BASE=repos@gad:
+
 # Modify paths
 export THERMOCHIMICA_DATA=~/master/mstdb/models/Database\ .dat\ Files/
 export DATA=~/master/SCALE_test_data
@@ -20,9 +23,10 @@ export PATH=~/env/scripts/postprocessing:$PATH
 export PATH=~/env/scripts/build_scripts:$PATH
 export PATH=~/env/scripts/run_scripts:$PATH
 export PATH=~/env/scripts/MCFR:$PATH
-export MPACT_DATA=~/master/VERAData/MPACT
-export MPACT_ADD_URL_REPO_BASE=repos@gad.ornl.gov:
+export MPACT_DATA=~/master/MPACT/VERAData/MPACT
 export HDF5_ROOT=/home/tools/gcc-8.3.0/tpls/opt/hdf5-1.10.1
+export KATANA_DATA_DIR=~/katana/data_dir
+export CODE_INT_TOKEN=-Hgd78Tn2i62uxM4n4_E
  
 # User specific aliases and functions
 alias ll='ls -lFh'
@@ -32,7 +36,7 @@ alias ma='module avail'
 alias qint='qsub -I'
  
 # Functions
-git-commit-before () { git rev-list -n 1 --first-parent --before="$1" master; }
+git_commit_before () { git rev-list -n 1 --first-parent --before="$1" master; }
 
 # Color command prompt
 PS1='\[\033[1;36m\]\u\[\033[1;31m\]@\[\033[1;32m\]\h:\[\033[1;35m\]\w\[\033[1;31m\]\$\[\033[0m\] '
@@ -42,4 +46,6 @@ export PATH=~/.local/bin:/home/ag6/.local/bin:/home/ag6/env/scripts/MCFR:/home/a
 
 # MOOSE crap
 export PATH=~/miniconda3/bin/:$PATH
-export GMON_OUT_PREFIX="gmon.out"
+#export GMON_OUT_PREFIX="gmon.out"
+
+
