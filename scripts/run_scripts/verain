@@ -11,7 +11,7 @@ filename=$(basename "$1")
 filename="${filename%.*}"
 mpact_path=`dirname $mpact`
 ctf_preproc=${mpact_path}/../../COBRA-TF/cobra_tf/xml2ctf/xml2ctf
-verain=${mpact_path}/../../../VERAIO/verain/scripts/react2xml.pl
+verain=${mpact_path}/../../../MPACT/VERAIO/verain/scripts/react2xml.pl
 
 # Convert verain to xml
 xmlfile=${filename}.xml

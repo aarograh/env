@@ -38,6 +38,11 @@ then
 fi
 
 # Call verain to perform conversion
+filename=$(basename "$infile")
+filename="${filename%.*}"
+if test -f "${filename}.xml"; then
+   rm ${filename}.xml
+fi
 verain $infile $mpact
 status=$?
 
