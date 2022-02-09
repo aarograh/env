@@ -12,6 +12,6 @@ cmake \
     -D VERA_TEST_CATEGORIES:STRING=HEAVY \
     -D CMAKE_SHARED_LINKER_FLAGS_INIT:STRING="-Wno-missing-include-dirs -Wno-deprecated-declarations -Wno-sign-compare -Wno-unused-local-typedefs" \
     -D CMAKE_EXE_LINKER_FLAGS_INIT:STRING="-Wno-missing-include-dirs -Wno-deprecated-declarations -Wno-sign-compare -Wno-unused-local-typedefs" \
-    -D MPI_EXEC_MAX_NUMPROCS=25 \
+    -D MPI_EXEC_MAX_NUMPROCS=36 \
     $@ \
     $SOURCE_DIR
