@@ -1,20 +1,20 @@
 Host arc-05
 Hostname ners-arc-05.engin.umich.edu
-ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
+ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
 Host nuram
 Hostname code-nuram.miserver.it.umich.edu
-ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
+ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
 Host sunspear
 Hostname sunspear.engin.umich.edu
 User aarograh
-ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
+ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
 Host nightfort
 Hostname nightfort.engin.umich.edu
 User aarograh
-ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
+ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
 Host dtn
 Hostname dtn.ccs.ornl.gov
@@ -27,7 +27,7 @@ User grahama
 Host hpclogin
 User grahaaro
 Hostname hpclogin.inl.gov
-ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
+ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 LocalForward 8522 hpcgitlab.inl.gov:22
 LocalForward 8582 hpcgitlab.inl.gov:443
 ForwardX11 yes
@@ -41,15 +41,15 @@ User git
 Host github
 Hostname github.com
 User git
-ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
+ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
 Host bitbucket
 Hostname bitbucket.org
 User git
-ProxyCommand corkscrew snowman.ornl.gov 3128 %h %p
+ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
 Host panacea
-Hostname mod-condo-login
+Hostname mod-slurm-login
 User ag6
 
 Host inspect
@@ -62,4 +62,8 @@ User ag6
 
 Host anl-gitlab
 Hostname xgitlab.cels.anl.gov
-Proxycommand corkscrew snowman.ornl.gov 3128 %h %p
+Proxycommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
+
+Host inl-gitlab
+Hostname gitlab.software.inl.gov
+Proxycommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
