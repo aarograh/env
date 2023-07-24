@@ -15,7 +15,7 @@ verain=${mpact_path}/../../../MPACT/VERAIO/verain/scripts/react2xml.pl
 
 # Convert verain to xml
 xmlfile=${filename}.xml
-command=`$verain $infile ${xmlfile}`
+command="`$verain $infile ${xmlfile}`"
 echo $command
 $command
 status=$?

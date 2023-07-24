@@ -3,6 +3,7 @@ Hostname ners-arc-05.engin.umich.edu
 ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
 Host nuram
+#Hostname arphys0.miserver.it.umich.edu
 Hostname code-nuram.miserver.it.umich.edu
 ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
@@ -60,10 +61,14 @@ Host ross
 Hostname ross-login
 User ag6
 
+#Host anl-gitlab
+#Hostname xgitlab.cels.anl.gov
+#Proxycommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 Host anl-gitlab
-Hostname xgitlab.cels.anl.gov
+Hostname git-nse.egs.anl.gov
+User git
 Proxycommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
 
-Host inl-gitlab
-Hostname gitlab.software.inl.gov
+Host github.inl.gov
+User git
 Proxycommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
