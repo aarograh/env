@@ -1,3 +1,5 @@
+ForwardX11 no
+
 Host arc-05
 Hostname ners-arc-05.engin.umich.edu
 ProxyCommand /usr/local/bin/corkscrew snowman.ornl.gov 3128 %h %p
