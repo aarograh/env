@@ -11,6 +11,7 @@ cmake \
     -D VERA_INCL_CEData:BOOL=ON \
     -D VERA_ENABLE_ALL_PACKAGES:BOOL=ON \
     -D VERA_TEST_CATEGORIES:STRING=HEAVY \
+    -D VERAIn_ENABLE_TESTS=ON \
     -D CMAKE_SHARED_LINKER_FLAGS_INIT:STRING="-Wno-missing-include-dirs -Wno-deprecated-declarations -Wno-sign-compare -Wno-unused-local-typedefs" \
     -D CMAKE_EXE_LINKER_FLAGS_INIT:STRING="-Wno-missing-include-dirs -Wno-deprecated-declarations -Wno-sign-compare -Wno-unused-local-typedefs" \
     -D MPI_EXEC_MAX_NUMPROCS=36 \
