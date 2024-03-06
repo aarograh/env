@@ -1,0 +1,21 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings for VERA 4.5
+spack:
+  specs:
+  - cmake@3.23.2
+  - mpich@4.1.2 %gcc@=12.3.0
+  - netlib-lapack@3.11.0 %gcc@=12.3.0
+  - boost@1.74.0 %gcc@12.3.0
+  - swig@4.0.2 %gcc@12.3.0
+  - hdf5@1.10.11 +cxx+fortran+hl ^mpich@4.1.2 %gcc@=12.3.0
+  - petsc@3.15.5 +metis+superlu-dist+hypre ^mpich@4.1.2 %gcc@=12.3.0
+  - silo@4.10.2 +hdf5 ^hdf5@1.10.11 +cxx+fortran+hl ^mpich@4.1.2 %gcc@=12.3.0
+  - trilinos@14.2.0 cxxstd=17 ~adios2~boost~chaco~complex~debug~dtk~exodus~gtest~float~hdf5~hypre~intrepid2~isorropia~mesquite~minitensor~muelu~mumps~nox~openmp~phalanx~piro~python~rol~rythmos~shylu~stk~suite-sparse~superlu~superlu-dist~teko~tempus~x11~zoltan~zoltan2+intrepid+stratimikos+thyra ^mpich@4.1.2 %gcc@=12.3.0
+  - python@3.11 
+  - py-pip ^python@3.11
+  - openssh@9.5p1
+  view: true
+  concretizer:
+    unify: true
