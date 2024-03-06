@@ -6,14 +6,14 @@ set relativenumber
 set pastetoggle=<F12>
 
 " Plugins
- call plug#begin()
- Plug 'jeffkreeftmeijer/vim-numbertoggle'
- Plug 'tpope/vim-sensible'
- Plug 'scrooloose/nerdtree'
- Plug 'junegunn/vim-easy-align'
- Plug 'Townk/vim-autoclose'
- Plug 'vim-scripts/python_calltips'
- call plug#end()
+"call plug#begin()
+"Plug 'jeffkreeftmeijer/vim-numbertoggle'
+"Plug 'tpope/vim-sensible'
+"Plug 'scrooloose/nerdtree'
+"Plug 'junegunn/vim-easy-align'
+"Plug 'Townk/vim-autoclose'
+"Plug 'vim-scripts/python_calltips'
+"call plug#end()
 
 " Key Mappings
 map <C-J> <C-W>j
