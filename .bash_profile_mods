@@ -1,0 +1,1 @@
+export PATH=~/env/scripts/build_scripts:~/env/scripts/run_scripts:$PATH
