@@ -1,0 +1,22 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings for VERA 4.5
+spack:
+  specs:
+  - cmake@3.23.2
+  - mpich@4.1.2 %gcc@=12.3.0
+  - netlib-lapack@3.11.0 %gcc@=12.3.0
+  - boost@1.74.0 %gcc@12.3.0
+  - swig@4.0.2 %gcc@12.3.0
+  - hdf5@1.10.11 +cxx+fortran+hl ^mpich@4.1.2 %gcc@=12.3.0
+  - petsc@3.15.5 +metis+superlu-dist+hypre ^mpich@4.1.2 %gcc@=12.3.0
+  - silo@4.10.2 +hdf5 ^hdf5@1.10.11 +cxx+fortran+hl ^mpich@4.1.2 %gcc@=12.3.0
+  - trilinos@14.2.0 cxxstd=17 ~adios2~boost~chaco~complex~debug~dtk~exodus~gtest~float~hdf5~hypre~intrepid2~isorropia~mesquite~minitensor~muelu~mumps~nox~openmp~phalanx~piro~python~rol~rythmos~shylu~stk~suite-sparse~superlu~superlu-dist~teko~tempus~x11~zoltan~zoltan2+intrepid+stratimikos+thyra ^mpich@4.1.2 %gcc@=12.3.0
+  - python@3.12 
+  - py-numpy@1.26.1
+    #- py-h5py@3.8.0
+    #- trilinos@14.2 +adelus+adios2+amesos+amesos2+anasazi+aztec+basker+belos+boost+chaco+debug+dtk+epetra+epetraext+epetraextbtf+epetraextexperimental+epetraextgraphreorderings+exodus+explicit_template_instantiation+float+fortran+gtest+hdf5+hypre+ifpack+ifpack2+intrepid+intrepid2+isorropia+kokkos+mesquite+minitensor+ml+mpi+muelu+mumps+nox+openmp+panzer+phalanx+piro+python+rocm+rocm_rdc+rol+rythmos+sacado+scorec+shards+shared+shylu+stk+stokhos+stratimikos+strumpack+suite-sparse+superlu+teko+tempus+test+thyra+tpetra+trilinoscouplings+wrapper+x11+zoltan+zoltan2 ^mpich@4.1.2 %gcc@=12.3.0
+  view: true
+  concretizer:
+    unify: true
