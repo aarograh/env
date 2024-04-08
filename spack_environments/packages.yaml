@@ -1,0 +1,7 @@
+packages:
+  python:
+    buildable: false
+    externals:
+      - spec: python@3.11.6
+        prefix: /home/aarog/miniconda3/bin
+

@@ -1,7 +1,7 @@
 # This is a Spack Environment file.
 #
 # It describes a set of packages to be installed, along with
-# configuration settings for VERA 4.5
+# configuration settings for SCALE 7.0 beta 2024/03/26
 spack:
   specs:
   - cmake@3.23.2
@@ -12,10 +12,23 @@ spack:
   - hdf5@1.10.11 +cxx+fortran+hl ^mpich@4.1.2 %gcc@=12.3.0
   - petsc@3.15.5 +metis+superlu-dist+hypre ^mpich@4.1.2 %gcc@=12.3.0
   - silo@4.10.2 +hdf5 ^hdf5@1.10.11 +cxx+fortran+hl ^mpich@4.1.2 %gcc@=12.3.0
-  - trilinos@14.2.0 cxxstd=17 ~adios2~boost~chaco~complex~debug~dtk~exodus~gtest~float~hdf5~hypre~intrepid2~isorropia~mesquite~minitensor~muelu~mumps~nox~openmp~phalanx~piro~python~rol~rythmos~shylu~stk~suite-sparse~superlu~superlu-dist~teko~tempus~x11~zoltan~zoltan2+intrepid+stratimikos+thyra ^mpich@4.1.2 %gcc@=12.3.0
-  - python@3.11 
-  - py-pip ^python@3.11
+  - trilinos@14.2.0 cxxstd=17 ~adios2~boost~chaco~complex~debug~dtk~exodus~gtest~float~hdf5~hypre~intrepid2~isorropia~mesquite~minitensor~muelu~mumps~nox~openmp~phalanx~piro~python~rol~rythmos~shylu~stk~suite-sparse~superlu~superlu-dist~teko~tempus~x11~zoltan~zoltan2+intrepid+ml+stratimikos+thyra ^mpich@4.1.2 %gcc@=12.3.0
   - openssh@9.5p1
+  - qt %gcc@=12.3.0
+  - nlohmann-json
+  - pugixml
+  - superlu
+  - googletest
+  - flibcpp
+  - gnds
   view: true
   concretizer:
     unify: true
+  packages:
+    python:
+      buildable: false
+      externals:
+      - spec: python@3.11.6
+        prefix: /home/aarog/miniconda3
+  config:
+    build_jobs: 10
