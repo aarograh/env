@@ -10,20 +10,21 @@ else
     echo "install path must be passed as second argument"
   else
     rm -rf $install_path/*
-    CXX=`which mpic++` CC=`which mpicc` FC=`which mpifort` F90=`which mpif90` cmake \
+    rm -rf CMake*
+    CXX=`which mpic++` CC=`which mpicc` FC=`which mpif90` F90=`which mpif90` cmake \
+    -DTPL_ENABLE_MPI=ON \
+    -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+    -DSCALE_ENABLE_ALL_PACKAGES=ON \
+    -DCMAKE_INSTALL_PREFIX=$install_path \
+    -DBUILD_SHARED_LIBS=ON \
+    -DTPL_ENABLE_Netcdf=OFF \
+    -DSCALE_USE_DAGMC=OFF \
        -D SCALE_GIT_SUBMODULE=OFF \
+       -D SCALE_USE_Fortran=ON \
        -D SCALE_USE_CUDA=OFF \
-       -D SCALE_USE_SWIG_Python=ON \
+       -D SCALE_USE_SWIG_Python=OFF \
        -D SCALE_USE_SWIG_Fortran=OFF \
-       -D SCALE_USE_Qt=ON \
-       -D SCALE_USE_OpenMP=ON \
-       -D CMAKE_INSTALL_PREFIX=${install_path} \
-       -D SCALE_DATA_DIR=${install_path}/../scale_data \
-       -D CMAKE_CXX_FLAGS="-fPIC" \
-       -D CMAKE_C_FLAGS="-fPIC" \
-       -D CMAKE_Fortran_FLAGS="-fPIC" \
-       -D CMAKE_BUILD_TYPE="RelWithDebInfo" \
-       $src_path $@ \
-       2>&1 | tee config.out
+       -D SCALE_DATA_DIR=/projects/veracity/aaron/scale_master/scale_7_data \
+    $src_path
   fi
 fi
