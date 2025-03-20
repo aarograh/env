@@ -4,16 +4,23 @@
 # configuration settings for VERA 4.4
 spack:
   specs:
-  - cmake@3.22
-  - mpich@3.3.1 %gcc@=8.4.0
+  - cmake@3.22 ^python@2.7.18
+  - mpich@3.3.1 ^python@2.7.18 %gcc@=8.4.0
   - netlib-lapack@3.5.0 %gcc@=8.4.0
-  - boost@1.55.0 %gcc@8.4.0
+  - boost@1.55.0 ^python@2.7.18 %gcc@8.4.0
   - swig@4.0.2 %gcc@8.4.0
   - hdf5@1.10.1 +cxx+fortran+hl ^mpich@3.3.1 %gcc@=8.4.0
-  - petsc@3.12.4 +metis+superlu-dist+hypre ^mpich@3.3.1 %gcc@=8.4.0
+  - petsc@3.12.4 +metis+superlu-dist+hypre ^python@2.7.18 ^mpich@3.3.1 %gcc@=8.4.0
   - silo@4.10.2 +hdf5 ^hdf5@1.10.1 +cxx+fortran+hl ^mpich@3.3.1 %gcc@=8.4.0
-  - python@2.7 
-    #- trilinos@13.4.1 +openmp +shared +mpi +amesos+amesos2+anasazi+aztec+belos+epetra+epetraext+ifpack+ifpack2+intrepid+kokkos+ml+muelu+nox+shards+stk+stratimikos+thyra+tpetra ^mpich@3.3.1 %gcc@=8.4.0
+  - openssh@9.5p1
   view: true
   concretizer:
     unify: true
+  packages:
+    python:
+      buildable: false
+      externals:
+      - spec: python@2.7.18+bz2+crypt+ctypes~dbm~lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl~tkinter+uuid+zlib
+        prefix: /home/aarog/miniconda3/envs/py2
+  config:
+    build_jobs: 10

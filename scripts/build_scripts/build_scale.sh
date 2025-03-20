@@ -25,6 +25,7 @@ else
        -D SCALE_USE_SWIG_Python=OFF \
        -D SCALE_USE_SWIG_Fortran=OFF \
        -D SCALE_DATA_DIR=/projects/veracity/aaron/scale_master/scale_7_data \
+       -D SCALE_BUILD_OMNIBUS_DOCS=ON \
     $src_path
   fi
 fi

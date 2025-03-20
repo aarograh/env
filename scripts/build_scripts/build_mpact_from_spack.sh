@@ -6,6 +6,7 @@ shift 2
 SPACK_DIR=${SPACK_ENV}/.spack-env/view
 SPACK_LIBS=${SPACK_DIR}/lib
 SPACK_INCLUDES=${SPACK_DIR}/include
+SPACK_BIN=${SPACK_DIR}/bin
 
 PETSC_LIBRARY_NAMES="petsc"
 HDF5_LIBRARY_NAMES="hdf5_hl;hdf5;hdf5_cpp;hdf5_fortran"
@@ -21,6 +22,9 @@ ${SCRIPT} ${MPACT}        -DMPACT_BUILD_STANDARD=OFF                          \
                           -DPETSC_LIBRARY_DIRS:FILEPATH=${SPACK_LIBS}         \
                           -DPETSC_INCLUDE_DIRS:FILEPATH=${SPACK_INCLUDES}     \
                           -DPETSC_LIBRARY_NAMES:STRING=${PETSC_LIBRARY_NAMES} \
+                          -DTPL_MPI_LIBRARY_DIRS:FILEPATH=${SPACK_LIBS}       \
+                          -DTPL_MPI_INCLUDE_DIRS:FILEPATH=${SPACK_INCLUDES}   \
+                          -DMPI_BIN_DIR:FILEPATH=${SPACK_BIN}                 \
                           -DMPI_EXEC_MAX_NUMPROCS=16 \
    -DMPACT_ENABLE_PolarisMoonraker=ON \
    $@
